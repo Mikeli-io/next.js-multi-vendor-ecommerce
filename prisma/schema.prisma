@@ -1,0 +1,58 @@
+// Covet — Phase 1 schema: authentication & authorization only.
+// Marketplace models (products, orders, cart, ...) are intentionally absent.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// A user has exactly one role. Guests are unauthenticated and are not a role.
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+/// Approval state of a *store*, kept separate from the user's account identity.
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+/// The single identity/authentication record for every role.
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  /// Present only when `role` is VENDOR.
+  vendor Vendor?
+
+  @@map("users")
+}
+
+/// The store behind a `role = VENDOR` user. Holds store identity and approval
+/// state only — earnings, catalog and payouts belong to later phases.
+model Vendor {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  storeName String
+  slug      String       @unique
+  status    VendorStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("vendors")
+}
