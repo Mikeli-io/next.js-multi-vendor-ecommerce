@@ -30,7 +30,6 @@ import {
   MessageIcon,
   MonitorIcon,
   SearchIcon,
-  SendIcon,
   SlidersIcon,
   SpeakerIcon,
   UserIcon,
@@ -64,26 +63,27 @@ const DASHBOARD_HREF: Record<Role, string> = {
   admin: "/admin/dashboard",
 };
 
+/**
+ * Primary sections, named after the section each icon opens in the design
+ * files (the sidebar title of the page that highlights it) and PRD §4.3/§4.4.
+ * Icons with no section defined in the designs or PRD are deliberately left
+ * out rather than given a guessed name; add them back when their section is.
+ * Admin order follows the admin section pages (People before Reports).
+ */
 const RAIL: Record<Role, NavItem[]> = {
   vendor: [
     { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.vendor },
-    { label: "Products", icon: BoxIcon },
+    { label: "Catalog", icon: BoxIcon },
     { label: "Orders", icon: BagIcon },
-    { label: "Shipping", icon: SendIcon },
     { label: "Marketing", icon: SpeakerIcon },
     { label: "Reports", icon: BarChartIcon },
-    { label: "Customers", icon: UsersIcon },
-    { label: "Settings", icon: SlidersIcon },
   ],
   admin: [
     { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.admin },
     { label: "Catalog", icon: BoxIcon },
     { label: "Orders", icon: BagIcon },
-    { label: "Shipping", icon: SendIcon },
-    { label: "Marketing", icon: SpeakerIcon },
-    { label: "Reports", icon: BarChartIcon },
     { label: "People", icon: UsersIcon },
-    { label: "Settings", icon: SlidersIcon },
+    { label: "Reports", icon: BarChartIcon },
   ],
 };
 
@@ -160,13 +160,12 @@ export function DashboardShell({
 
   return (
     <div className="flex min-h-dvh bg-bg-dash">
-      {/* Desktop navigation, in flow. */}
-      {!collapsed ? (
-        <div className="sticky top-0 hidden h-dvh flex-none lg:flex">
-          <Rail role={role} />
-          <Sidebar items={sidebarItems} />
-        </div>
-      ) : null}
+      {/* Desktop navigation, in flow. Collapsing keeps the rail, icon-only,
+          and hides the secondary sidebar. */}
+      <div className="sticky top-0 hidden h-dvh flex-none lg:flex">
+        <Rail role={role} labelled={!collapsed} />
+        {!collapsed ? <Sidebar items={sidebarItems} /> : null}
+      </div>
 
       {/* Mobile / tablet navigation, as a drawer. */}
       {drawerOpen ? (
@@ -178,7 +177,7 @@ export function DashboardShell({
             className="absolute inset-0 bg-[rgba(20,18,31,.55)] backdrop-blur-[3px]"
           />
           <div className="relative flex h-full w-fit max-w-[calc(100vw-48px)] shadow-xl">
-            <Rail role={role} />
+            <Rail role={role} labelled />
             <Sidebar items={sidebarItems} onClose={() => setDrawerOpen(false)} />
           </div>
         </div>
@@ -251,29 +250,55 @@ export function DashboardShell({
   );
 }
 
-function Rail({ role }: { role: Role }) {
+/**
+ * The dark primary rail. Expanded, each icon carries its section name beneath
+ * it (the rail widens from 64px to 80px); collapsed, it is icon-only. Icon
+ * tiles, colours and the active state are the same in both.
+ */
+function Rail({ role, labelled }: { role: Role; labelled: boolean }) {
   return (
     <nav
       aria-label="Sections"
-      className="flex h-full w-16 flex-none flex-col items-center gap-2 overflow-y-auto bg-ink py-4"
+      className={`flex h-full flex-none flex-col items-center overflow-y-auto bg-ink py-4 transition-[width] duration-200 ${
+        labelled ? "w-20 gap-3" : "w-16 gap-2"
+      }`}
     >
       <span className="mb-[14px] grid size-[38px] flex-none place-items-center rounded-[11px] bg-iris-500 text-surface">
         <CartIcon size={20} />
       </span>
-      {RAIL[role].map(({ label, icon: Icon, href }, index) => (
-        <NavTarget
-          key={label}
-          href={href}
-          label={label}
-          className={`grid size-10 flex-none place-items-center rounded-[11px] transition-colors duration-150 ${
-            index === 0
-              ? "bg-iris-500 text-surface hover:text-surface"
-              : "text-on-ink-muted hover:text-surface"
-          }`}
-        >
-          <Icon size={20} strokeWidth={1.9} />
-        </NavTarget>
-      ))}
+      {RAIL[role].map(({ label, icon: Icon, href }, index) => {
+        const active = index === 0;
+        return (
+          <NavTarget
+            key={label}
+            href={href}
+            // Visible text names the link when labelled; otherwise the icon needs one.
+            label={labelled ? undefined : label}
+            className={`group flex w-full flex-none flex-col items-center gap-1 transition-colors duration-150 ${
+              active
+                ? "text-surface hover:text-surface"
+                : "text-on-ink-muted hover:text-surface"
+            }`}
+          >
+            <span
+              className={`grid size-10 place-items-center rounded-[11px] ${
+                active ? "bg-iris-500" : ""
+              }`}
+            >
+              <Icon size={20} strokeWidth={1.9} />
+            </span>
+            {labelled ? (
+              <span
+                className={`max-w-full truncate px-1 text-[10.5px] leading-none ${
+                  active ? "font-semibold" : "font-medium"
+                }`}
+              >
+                {label}
+              </span>
+            ) : null}
+          </NavTarget>
+        );
+      })}
     </nav>
   );
 }
