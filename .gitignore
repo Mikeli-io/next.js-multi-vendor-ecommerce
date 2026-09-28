@@ -44,3 +44,6 @@ next-env.d.ts
 
 # design mockups (large, reference only)
 /designs/
+
+# locally stored uploads (development-stage storage, see lib/uploads)
+/public/uploads/

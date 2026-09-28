@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "destructive";
 type Size = "md" | "sm";
 
 const VARIANTS: Record<Variant, string> = {
@@ -8,6 +8,9 @@ const VARIANTS: Record<Variant, string> = {
   secondary:
     "border border-line bg-surface text-ink-soft hover:bg-field disabled:text-muted-soft",
   ghost: "bg-transparent text-ink-soft hover:bg-field disabled:text-muted-soft",
+  // DESIGN_SYSTEM.md §8: error fg on error-soft; solid on hover.
+  destructive:
+    "bg-error-bg text-error hover:bg-error hover:text-surface disabled:opacity-60",
 };
 
 // Sizes are a prop rather than a caller-supplied class, so a height override

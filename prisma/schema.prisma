@@ -56,3 +56,29 @@ model Vendor {
 
   @@map("vendors")
 }
+
+enum BrandStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// A product brand, managed by admins.
+///
+/// There is no Product model yet, so there is no Product → Brand relation and
+/// deliberately no stored product count: when Product is added, give it a
+/// `brandId` (onDelete: Restrict, so deleting a used brand fails loudly) and
+/// derive counts from that relation.
+model Brand {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  /// Derived from `name` on the server; never user input.
+  slug      String      @unique
+  /// Public URL path of the uploaded logo, e.g. /uploads/brands/<uuid>.png
+  image     String?
+  status    BrandStatus @default(ACTIVE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([status])
+  @@map("brands")
+}

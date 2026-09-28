@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import {
+  Fragment,
   useEffect,
   useRef,
   useState,
   type ComponentType,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 
 import {
   BagIcon,
@@ -54,9 +56,23 @@ type Role = "vendor" | "admin";
 
 type NavItem = {
   label: string;
-  icon: ComponentType<IconProps>;
+  icon?: ComponentType<IconProps>;
   href?: string;
 };
+
+/** Primary sections a page can belong to; decides the rail highlight and sidebar. */
+export type ShellSection = "home" | "catalog";
+
+type RailItem = NavItem & { icon: ComponentType<IconProps>; section?: ShellSection };
+
+type SidebarConfig = {
+  title: string;
+  /** Home's header carries an icon chip in the designs; section headers do not. */
+  icon?: ComponentType<IconProps>;
+  groups: { title: string; items: NavItem[] }[];
+};
+
+export type Crumb = { label: string; href?: string };
 
 const DASHBOARD_HREF: Record<Role, string> = {
   vendor: "/vendor/dashboard",
@@ -70,35 +86,85 @@ const DASHBOARD_HREF: Record<Role, string> = {
  * out rather than given a guessed name; add them back when their section is.
  * Admin order follows the admin section pages (People before Reports).
  */
-const RAIL: Record<Role, NavItem[]> = {
+const RAIL: Record<Role, RailItem[]> = {
   vendor: [
-    { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.vendor },
+    { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.vendor, section: "home" },
     { label: "Catalog", icon: BoxIcon },
     { label: "Orders", icon: BagIcon },
     { label: "Marketing", icon: SpeakerIcon },
     { label: "Reports", icon: BarChartIcon },
   ],
   admin: [
-    { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.admin },
-    { label: "Catalog", icon: BoxIcon },
+    { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.admin, section: "home" },
+    // Brand Setup is the only Catalog page built so far, so the section opens there.
+    { label: "Catalog", icon: BoxIcon, href: "/admin/brands", section: "catalog" },
     { label: "Orders", icon: BagIcon },
     { label: "People", icon: UsersIcon },
     { label: "Reports", icon: BarChartIcon },
   ],
 };
 
-const SIDEBAR: Record<Role, NavItem[]> = {
-  vendor: [
-    { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.vendor },
-    { label: "POS", icon: MonitorIcon },
+const HOME_SIDEBAR = (role: Role): SidebarConfig => ({
+  title: "Home",
+  icon: HomeIcon,
+  groups: [
+    {
+      title: "Overview",
+      items: [
+        { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF[role] },
+        { label: "POS", icon: MonitorIcon },
+      ],
+    },
   ],
-  admin: [
-    { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.admin },
-    { label: "POS", icon: MonitorIcon },
-  ],
+});
+
+/**
+ * Secondary sidebars per section. The admin Catalog groups mirror
+ * `AdminProductList.dc.html`; only pages that exist are links (Brand Setup).
+ */
+const SIDEBAR: Record<Role, Partial<Record<ShellSection, SidebarConfig>>> = {
+  vendor: { home: HOME_SIDEBAR("vendor") },
+  admin: {
+    home: HOME_SIDEBAR("admin"),
+    catalog: {
+      title: "Catalog",
+      groups: [
+        {
+          title: "In House Products",
+          items: [
+            { label: "Product List" },
+            { label: "Add New Product" },
+            { label: "Limited Stock" },
+            { label: "Request Restock List" },
+            { label: "Bulk Import" },
+          ],
+        },
+        {
+          title: "Vendor Products",
+          items: [
+            { label: "New Products Request" },
+            { label: "Product Update Request" },
+            { label: "Approved Products" },
+            { label: "Denied Products" },
+          ],
+        },
+        {
+          title: "Organization",
+          items: [
+            { label: "Category Setup" },
+            { label: "Brand Setup", href: "/admin/brands" },
+            { label: "Product Attribute Setup" },
+            { label: "Product Gallery" },
+          ],
+        },
+      ],
+    },
+  },
 };
 
-const PROFILE_MENU: Record<Role, NavItem[]> = {
+const DEFAULT_CRUMBS: Crumb[] = [{ label: "Home", href: "/" }, { label: "Dashboard" }];
+
+const PROFILE_MENU: Record<Role, RailItem[]> = {
   vendor: [
     { label: "Profile Setting", icon: UserIcon },
     { label: "Change Password", icon: LockIcon },
@@ -118,9 +184,14 @@ export type ShellUser = {
 export function DashboardShell({
   role,
   user,
+  section = "home",
+  breadcrumb = DEFAULT_CRUMBS,
   children,
 }: {
   role: Role;
+  /** The primary section this page belongs to. */
+  section?: ShellSection;
+  breadcrumb?: Crumb[];
   /**
    * `undefined` while loading renders the profile chip as a skeleton; `null`
    * (an error screen, where the user could not be loaded) omits it.
@@ -153,18 +224,27 @@ export function DashboardShell({
     };
   }, [drawerOpen]);
 
+  const pathname = usePathname();
+  const sidebar = SIDEBAR[role][section] ?? SIDEBAR[role].home!;
   const query = menuQuery.trim().toLowerCase();
-  const sidebarItems = query
-    ? SIDEBAR[role].filter((item) => item.label.toLowerCase().includes(query))
-    : SIDEBAR[role];
+  const sidebarGroups = sidebar.groups
+    .map((group) => ({
+      ...group,
+      items: query
+        ? group.items.filter((item) => item.label.toLowerCase().includes(query))
+        : group.items,
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <div className="flex min-h-dvh bg-bg-dash">
       {/* Desktop navigation, in flow. Collapsing keeps the rail, icon-only,
           and hides the secondary sidebar. */}
       <div className="sticky top-0 hidden h-dvh flex-none lg:flex">
-        <Rail role={role} labelled={!collapsed} />
-        {!collapsed ? <Sidebar items={sidebarItems} /> : null}
+        <Rail role={role} section={section} labelled={!collapsed} />
+        {!collapsed ? (
+          <Sidebar config={sidebar} groups={sidebarGroups} pathname={pathname} />
+        ) : null}
       </div>
 
       {/* Mobile / tablet navigation, as a drawer. */}
@@ -177,8 +257,13 @@ export function DashboardShell({
             className="absolute inset-0 bg-[rgba(20,18,31,.55)] backdrop-blur-[3px]"
           />
           <div className="relative flex h-full w-fit max-w-[calc(100vw-48px)] shadow-xl">
-            <Rail role={role} labelled />
-            <Sidebar items={sidebarItems} onClose={() => setDrawerOpen(false)} />
+            <Rail role={role} section={section} labelled />
+            <Sidebar
+              config={sidebar}
+              groups={sidebarGroups}
+              pathname={pathname}
+              onClose={() => setDrawerOpen(false)}
+            />
           </div>
         </div>
       ) : null}
@@ -204,11 +289,20 @@ export function DashboardShell({
             aria-label="Breadcrumb"
             className="hidden items-center gap-2 text-[13px] font-medium leading-none sm:flex"
           >
-            <Link href="/" className="text-iris-500">
-              Home
-            </Link>
-            <ChevronRightIcon className="text-muted-soft" />
-            <span className="text-muted">Dashboard</span>
+            {breadcrumb.map((crumb, index) => (
+              <Fragment key={`${crumb.label}-${index}`}>
+                {index > 0 ? <ChevronRightIcon className="text-muted-soft" /> : null}
+                {crumb.href ? (
+                  <Link href={crumb.href} className="text-iris-500">
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span aria-current="page" className="max-w-[240px] truncate text-muted">
+                    {crumb.label}
+                  </span>
+                )}
+              </Fragment>
+            ))}
           </nav>
 
           {role === "admin" ? (
@@ -255,7 +349,15 @@ export function DashboardShell({
  * it (the rail widens from 64px to 80px); collapsed, it is icon-only. Icon
  * tiles, colours and the active state are the same in both.
  */
-function Rail({ role, labelled }: { role: Role; labelled: boolean }) {
+function Rail({
+  role,
+  section,
+  labelled,
+}: {
+  role: Role;
+  section: ShellSection;
+  labelled: boolean;
+}) {
   return (
     <nav
       aria-label="Sections"
@@ -266,8 +368,8 @@ function Rail({ role, labelled }: { role: Role; labelled: boolean }) {
       <span className="mb-[14px] grid size-[38px] flex-none place-items-center rounded-[11px] bg-iris-500 text-surface">
         <CartIcon size={20} />
       </span>
-      {RAIL[role].map(({ label, icon: Icon, href }, index) => {
-        const active = index === 0;
+      {RAIL[role].map(({ label, icon: Icon, href, section: itemSection }) => {
+        const active = itemSection === section;
         return (
           <NavTarget
             key={label}
@@ -303,15 +405,33 @@ function Rail({ role, labelled }: { role: Role; labelled: boolean }) {
   );
 }
 
-function Sidebar({ items, onClose }: { items: NavItem[]; onClose?: () => void }) {
+function Sidebar({
+  config,
+  groups,
+  pathname,
+  onClose,
+}: {
+  config: SidebarConfig;
+  groups: SidebarConfig["groups"];
+  pathname: string;
+  onClose?: () => void;
+}) {
+  const HeaderIcon = config.icon;
+
   return (
     <aside className="h-full w-[236px] flex-none overflow-y-auto border-r border-line bg-surface px-4 py-5">
       <div className="mb-4 flex items-center gap-[10px] border-b border-line-soft px-2 pb-5">
-        <span className="grid size-[34px] place-items-center rounded-[10px] bg-iris-50 text-iris-500">
-          <HomeIcon />
-        </span>
-        <span className="font-display text-[16px] font-bold leading-none text-ink">
-          Home
+        {HeaderIcon ? (
+          <span className="grid size-[34px] place-items-center rounded-[10px] bg-iris-50 text-iris-500">
+            <HeaderIcon />
+          </span>
+        ) : null}
+        <span
+          className={`font-display font-bold leading-none text-ink ${
+            HeaderIcon ? "text-[16px]" : "text-[17px]"
+          }`}
+        >
+          {config.title}
         </span>
         {onClose ? (
           <button
@@ -325,29 +445,40 @@ function Sidebar({ items, onClose }: { items: NavItem[]; onClose?: () => void })
         ) : null}
       </div>
 
-      <p className="mb-[10px] px-2 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-muted-soft">
-        Overview
-      </p>
-
-      <div className="flex flex-col gap-[3px]">
-        {items.map(({ label, icon: Icon, href }, index) => (
-          <NavTarget
-            key={label}
-            href={href}
-            className={`flex items-center gap-[11px] rounded-[10px] px-3 py-[10px] text-[13.5px] leading-none transition-colors duration-150 ${
-              index === 0 && href
-                ? "bg-iris-50 font-semibold text-iris-500 hover:text-iris-500"
-                : "font-medium text-ink-soft hover:bg-field hover:text-ink-soft"
-            }`}
-          >
-            <Icon size={17} strokeWidth={1.9} />
-            {label}
-          </NavTarget>
-        ))}
-        {!items.length ? (
-          <p className="px-3 py-2 text-[12.5px] text-muted">No matching menu items.</p>
-        ) : null}
-      </div>
+      {groups.map((group) => (
+        <div key={group.title} className="mb-[6px]">
+          <p className="mb-[10px] mt-[14px] px-2 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-muted-soft first:mt-0">
+            {group.title}
+          </p>
+          <div className="flex flex-col gap-[3px]">
+            {group.items.map(({ label, icon: Icon, href }) => {
+              // Active for the page itself and anything beneath it (/admin/brands/[id]).
+              const active = Boolean(
+                href && (pathname === href || pathname.startsWith(`${href}/`)),
+              );
+              return (
+                <NavTarget
+                  key={label}
+                  href={href}
+                  className={`flex items-center gap-[11px] rounded-[10px] px-3 text-[13.5px] leading-none transition-colors duration-150 ${
+                    Icon ? "py-[10px]" : "py-[9px]"
+                  } ${
+                    active
+                      ? "bg-iris-50 font-semibold text-iris-500 hover:text-iris-500"
+                      : "font-medium text-ink-soft hover:bg-field hover:text-ink-soft"
+                  }`}
+                >
+                  {Icon ? <Icon size={17} strokeWidth={1.9} /> : null}
+                  {label}
+                </NavTarget>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {!groups.length ? (
+        <p className="px-3 py-2 text-[12.5px] text-muted">No matching menu items.</p>
+      ) : null}
     </aside>
   );
 }

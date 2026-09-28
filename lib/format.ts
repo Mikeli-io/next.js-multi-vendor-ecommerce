@@ -28,3 +28,10 @@ export function maskEmail(email: string): string {
 export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
 }
+
+const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/** `2026-09-26T…` → `Sep 26, 2026`. */
+export function formatDate(value: Date | string): string {
+  return date.format(new Date(value));
+}

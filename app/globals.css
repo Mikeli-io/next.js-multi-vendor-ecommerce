@@ -57,6 +57,7 @@
   --on-ink-muted: #8b8895;
   --on-ink-faint: #6c6976;
   --line-strong: #dad8e0; /* dashed empty-state borders */
+  --toggle-off: #e4e2e9; /* switch track when off — DESIGN_SYSTEM.md §8 */
 
   /* layout */
   --container-max: 1600px;
@@ -140,6 +141,7 @@
   --color-on-ink-muted: var(--on-ink-muted);
   --color-on-ink-faint: var(--on-ink-faint);
   --color-line-strong: var(--line-strong);
+  --color-toggle-off: var(--toggle-off);
 
   --radius-sm: var(--r-sm);
   --radius-md: var(--r-md);

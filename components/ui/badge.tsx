@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-type Tone = "success" | "warning" | "error" | "info" | "accent";
+type Tone = "success" | "warning" | "error" | "info" | "accent" | "neutral";
 
 const TONES: Record<Tone, string> = {
   success: "bg-success-bg text-success",
@@ -8,6 +8,8 @@ const TONES: Record<Tone, string> = {
   error: "bg-error-bg text-error",
   info: "bg-info-bg text-info",
   accent: "bg-accent-bg text-accent-fg",
+  // Inactive / off states that are not an error.
+  neutral: "bg-field text-muted",
 };
 
 export function Badge({

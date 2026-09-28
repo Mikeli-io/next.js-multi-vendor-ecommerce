@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { signIn } from "@/auth";
 import { hashPassword } from "@/lib/auth/password";
 import { landingPathFor } from "@/lib/auth/routes";
-import { generateUniqueSlug } from "@/lib/auth/slug";
+import { generateUniqueSlug } from "@/lib/slug";
 import { prisma } from "@/lib/prisma";
 import { toFieldErrors } from "@/lib/validation/field-errors";
 import {
@@ -131,7 +131,14 @@ export async function registerVendor(
   }
 
   const passwordHash = await hashPassword(password);
-  const slug = await generateUniqueSlug(storeName);
+  const slug = await generateUniqueSlug(
+    storeName,
+    async (candidate) =>
+      Boolean(
+        await prisma.vendor.findUnique({ where: { slug: candidate }, select: { id: true } }),
+      ),
+    "store",
+  );
 
   try {
     // The store is nested inside the user's `create`, so Prisma writes both
