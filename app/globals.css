@@ -1,26 +1,218 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Covet design tokens — docs/DESIGN_SYSTEM.md is the source of truth.
+   Components reference these names; they never hardcode a hex or a radius.
+--------------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* brand — iris scale */
+  --iris-50: #f5f2ff;
+  --iris-100: #ebe6fe;
+  --iris-200: #d8cefe;
+  --iris-300: #bca9fb;
+  --iris-400: #9b7df5;
+  --iris-500: #6544e0;
+  --iris-600: #5636c6;
+  --iris-700: #472ba3;
+  --iris-800: #392585;
+  --iris-900: #2e1f6b;
+
+  /* neutrals */
+  --ink: #17151f;
+  --ink-soft: #3a3745;
+  --muted: #75727f;
+  --muted-soft: #a5a2ae;
+  --line: #ececf1;
+  --line-soft: #f1f0f4;
+  --surface: #ffffff;
+  --bg: #fafafa;
+  --bg-dash: #f4f3f7;
+  --bg-subtle: #fbfafc;
+  --field: #f5f4f7;
+
+  /* status */
+  --success: #2e7d53;
+  --success-bg: #e6f5ee;
+  --warning: #b4741c;
+  --warning-bg: #fbefdd;
+  --error: #c0403f;
+  --error-bg: #fdecec;
+  --info: #2c5e9e;
+  --info-bg: #eaf1fc;
+  --accent-fg: #472ba3;
+  --accent-bg: #ebe6fe;
+  --star: #e8a13a;
+
+  /* solid status hues — icons, dots and chart series (DESIGN_SYSTEM.md §2) */
+  --success-solid: #2e9e6b;
+  --warning-solid: #e0912f;
+  --error-solid: #e5484d;
+  --info-solid: #4c7df0;
+
+  /* dashboard neutrals used repeatedly by the dashboard designs */
+  --track: #edecf1; /* pill-tab track, skeleton base */
+  --shine: #f7f6f9; /* skeleton highlight */
+  /* text on ink surfaces (utility bar, icon rail, footer) */
+  --on-ink: #c9c7d1;
+  --on-ink-muted: #8b8895;
+  --on-ink-faint: #6c6976;
+  --line-strong: #dad8e0; /* dashed empty-state borders */
+  --toggle-off: #e4e2e9; /* switch track when off — DESIGN_SYSTEM.md §8 */
+
+  /* layout */
+  --container-max: 1600px;
+  --cpad: 40px;
+
+  /* radius */
+  --r-sm: 8px;
+  --r-md: 11px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 22px;
+  --r-full: 999px;
+
+  /* elevation */
+  --shadow-xs: 0 1px 2px rgba(20, 18, 31, 0.05);
+  --shadow-sm: 0 4px 12px -2px rgba(20, 18, 31, 0.12);
+  --shadow-md: 0 16px 34px -14px rgba(20, 18, 31, 0.18);
+  --shadow-lg: 0 26px 64px -16px rgba(20, 18, 31, 0.28);
+  --shadow-xl: 0 40px 90px -20px rgba(20, 18, 31, 0.5);
+  /* dashboard designs: small-tile hover lift, and dropdown menus */
+  --shadow-tile: 0 10px 24px -14px rgba(20, 18, 31, 0.2);
+  --shadow-menu: 0 20px 48px -14px rgba(20, 18, 31, 0.28);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@media (max-width: 1024px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --cpad: 24px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (max-width: 640px) {
+  :root {
+    --cpad: 16px;
+  }
+}
+
+/* Expose the tokens above as Tailwind utilities: bg-iris-500, text-ink,
+   rounded-xl, shadow-md, font-display, ... */
+@theme inline {
+  --color-iris-50: var(--iris-50);
+  --color-iris-100: var(--iris-100);
+  --color-iris-200: var(--iris-200);
+  --color-iris-300: var(--iris-300);
+  --color-iris-400: var(--iris-400);
+  --color-iris-500: var(--iris-500);
+  --color-iris-600: var(--iris-600);
+  --color-iris-700: var(--iris-700);
+  --color-iris-800: var(--iris-800);
+  --color-iris-900: var(--iris-900);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-muted-soft: var(--muted-soft);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-surface: var(--surface);
+  --color-bg: var(--bg);
+  --color-bg-dash: var(--bg-dash);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-field: var(--field);
+
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-error: var(--error);
+  --color-error-bg: var(--error-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-bg: var(--accent-bg);
+  --color-star: var(--star);
+  --color-success-solid: var(--success-solid);
+  --color-warning-solid: var(--warning-solid);
+  --color-error-solid: var(--error-solid);
+  --color-info-solid: var(--info-solid);
+  --color-track: var(--track);
+  --color-shine: var(--shine);
+  --color-on-ink: var(--on-ink);
+  --color-on-ink-muted: var(--on-ink-muted);
+  --color-on-ink-faint: var(--on-ink-faint);
+  --color-line-strong: var(--line-strong);
+  --color-toggle-off: var(--toggle-off);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-2xl: var(--r-2xl);
+  --radius-full: var(--r-full);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-tile: var(--shadow-tile);
+  --shadow-menu: var(--shadow-menu);
+
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Element defaults live in the base layer. Unlayered rules outrank every
+ * Tailwind layer, so an unlayered `a { color }` would silently override
+ * `text-*` utilities on every link (e.g. the active rail icon rendering
+ * iris-on-iris).
+ */
+@layer base {
+  html {
+    /* The app reads ~6% larger than browser default — DESIGN_SYSTEM.md §3. */
+    font-size: 17px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink-soft);
+    font-family: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  a {
+    color: var(--iris-500);
+  }
+
+  a:hover {
+    color: var(--iris-600);
+  }
+
+  /* A single visible focus treatment for every interactive control. */
+  :focus-visible {
+    outline: none;
+    border-color: var(--iris-500);
+    box-shadow: 0 0 0 3px var(--iris-100);
+  }
+}
+
+/* Skeleton shimmer — DESIGN_SYSTEM.md §8. */
+@keyframes shimmer {
+  0% {
+    background-position: -450px 0;
+  }
+  100% {
+    background-position: 450px 0;
+  }
+}
+
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--track) 25%,
+    var(--shine) 50%,
+    var(--track) 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s infinite linear;
 }
