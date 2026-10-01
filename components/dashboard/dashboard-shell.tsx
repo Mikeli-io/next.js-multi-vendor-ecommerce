@@ -276,7 +276,7 @@ export function DashboardShell({
           </nav>
 
           {role === "admin" ? (
-            <label className="ml-[14px] hidden h-10 max-w-[420px] flex-1 items-center overflow-hidden rounded-[10px] border border-line bg-field transition-[border-color,box-shadow] duration-200 focus-within:border-iris-500 focus-within:shadow-[0_0_0_3px_var(--iris-100)] md:flex">
+            <label className="ml-[14px] hidden h-10 max-w-[420px] flex-1 items-center overflow-hidden rounded-[10px] border border-line bg-field transition-[border-color] duration-200 field-focus-within md:flex">
               <span className="px-3 text-muted-soft">
                 <SearchIcon size={16} />
               </span>

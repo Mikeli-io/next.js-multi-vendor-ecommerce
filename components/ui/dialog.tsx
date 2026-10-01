@@ -8,7 +8,8 @@ import { CloseIcon } from "./icons";
  * Modal dialog on the native `<dialog>` element: `showModal()` gives focus
  * trapping, Escape handling, inert background and top-layer stacking for free.
  * Styled per DESIGN_SYSTEM.md §8 — `--r-2xl`, `--shadow-xl`, ink backdrop with
- * a 3px blur.
+ * a 3px blur — and opens with the subtle `dialog-enter` animation (skipped for
+ * reduced-motion users).
  *
  * Mark the element that should receive initial focus with `data-autofocus`.
  *
@@ -64,7 +65,7 @@ export function Dialog({
         // A click on the element itself (not its content) is the backdrop.
         if (event.target === event.currentTarget && dismissible) onClose();
       }}
-      className={`m-auto w-[calc(100%-32px)] rounded-2xl bg-surface p-0 text-ink-soft shadow-xl backdrop:bg-[rgba(20,18,31,.55)] backdrop:backdrop-blur-[3px] ${
+      className={`dialog-enter m-auto w-[calc(100%-32px)] rounded-2xl bg-surface p-0 text-ink-soft shadow-xl backdrop:bg-[rgba(20,18,31,.55)] backdrop:backdrop-blur-[3px] ${
         size === "sm" ? "max-w-[440px]" : "max-w-[560px]"
       }`}
     >

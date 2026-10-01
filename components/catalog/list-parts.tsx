@@ -87,7 +87,7 @@ export function SearchToolbar({
   return (
     <div className="mb-5 flex flex-wrap items-center gap-[14px]">
       <form role="search" action={action} className="flex min-w-[240px] flex-1 flex-wrap items-center gap-[14px]">
-        <div className="flex h-[46px] min-w-[240px] flex-1 items-center overflow-hidden rounded-[11px] border border-line bg-field transition-[border-color,box-shadow] duration-200 focus-within:border-iris-500 focus-within:shadow-[0_0_0_3px_var(--iris-100)]">
+        <div className="flex h-[46px] min-w-[240px] flex-1 items-center overflow-hidden rounded-[11px] border border-line bg-field transition-[border-color] duration-200 field-focus-within">
           <span className="px-[14px] text-muted-soft">
             <SearchIcon size={17} />
           </span>
@@ -140,7 +140,7 @@ export function FilterSelect({
       <select
         name={name}
         defaultValue={value}
-        className="h-full w-full cursor-pointer appearance-none rounded-[11px] border border-line bg-surface pl-4 pr-10 text-[13px] font-medium text-ink-soft outline-none transition-[border-color,box-shadow] duration-200 focus:border-iris-500 focus:shadow-[0_0_0_3px_var(--iris-100)]"
+        className="h-full w-full cursor-pointer appearance-none rounded-[11px] border border-line bg-surface pl-4 pr-10 text-[13px] font-medium text-ink-soft outline-none transition-[border-color] duration-200 field-focus"
       >
         <option value="">{allLabel}</option>
         {options.map((o) => (

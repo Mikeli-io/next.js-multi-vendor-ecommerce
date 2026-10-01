@@ -12,12 +12,13 @@ import { EyeIcon, EyeOffIcon } from "./icons";
 
 const LABEL = "block text-[13px] font-semibold leading-none text-ink-soft";
 
-const RING =
-  "focus-within:border-iris-500 focus-within:bg-surface focus-within:shadow-[0_0_0_3px_var(--iris-100)]";
+// Focus: neutral border via the shared `field-focus-within` utility.
+const RING = "field-focus-within";
 
 function shellClasses(hasError: boolean) {
-  return `flex h-[50px] items-center overflow-hidden rounded-[12px] border bg-bg-subtle transition-[border-color,box-shadow,background-color] duration-200 ${RING} ${
-    hasError ? "border-error" : "border-line"
+  // An invalid field keeps its red border while focused.
+  return `flex h-[50px] items-center overflow-hidden rounded-[12px] border bg-bg-subtle transition-[border-color,background-color] duration-200 focus-within:bg-surface ${
+    hasError ? "border-error" : `border-line ${RING}`
   }`;
 }
 
@@ -157,7 +158,7 @@ export function Checkbox({
           id={id}
           type="checkbox"
           aria-describedby={errors?.length ? errorId : undefined}
-          className="mt-[1px] size-[19px] flex-none cursor-pointer appearance-none rounded-[6px] border-[1.5px] border-[#D6D4DD] bg-surface bg-[length:12px_12px] bg-center bg-no-repeat transition-colors duration-200 checked:border-iris-500 checked:bg-iris-500 checked:bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%2220 6 9 17 4 12%22/></svg>')] focus-visible:border-iris-500"
+          className="mt-[1px] size-[19px] flex-none cursor-pointer appearance-none rounded-[6px] border-[1.5px] border-[#D6D4DD] bg-surface bg-[length:12px_12px] bg-center bg-no-repeat transition-colors duration-200 checked:border-iris-500 checked:bg-iris-500 checked:bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%2220 6 9 17 4 12%22/></svg>')] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-muted"
         />
         <label
           htmlFor={id}

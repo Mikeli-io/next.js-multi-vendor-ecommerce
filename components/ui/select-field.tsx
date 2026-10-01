@@ -41,8 +41,8 @@ export function SelectField({
           id={id}
           aria-invalid={hasError || undefined}
           aria-describedby={hasError ? errorId : hint ? `${id}-hint` : undefined}
-          className={`h-[50px] w-full cursor-pointer appearance-none rounded-[12px] border bg-bg-subtle pl-[15px] pr-11 text-[14px] text-ink outline-none transition-[border-color,box-shadow,background-color] duration-200 focus:border-iris-500 focus:bg-surface focus:shadow-[0_0_0_3px_var(--iris-100)] disabled:cursor-not-allowed disabled:text-muted-soft ${
-            hasError ? "border-error" : "border-line"
+          className={`h-[50px] w-full cursor-pointer appearance-none rounded-[12px] border bg-bg-subtle pl-[15px] pr-11 text-[14px] text-ink outline-none transition-[border-color,background-color] duration-200 focus:bg-surface disabled:cursor-not-allowed disabled:text-muted-soft ${
+            hasError ? "border-error" : "border-line field-focus"
           }`}
         >
           <option value="">{placeholder}</option>

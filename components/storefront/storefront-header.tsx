@@ -151,7 +151,7 @@ function SearchBar({ className }: { className: string }) {
   return (
     <div
       role="search"
-      className={`h-12 flex-1 items-center rounded-[12px] border border-line bg-field transition-[border-color,box-shadow] duration-200 focus-within:border-iris-500 focus-within:shadow-[0_0_0_3px_var(--iris-100)] ${className}`}
+      className={`h-12 flex-1 items-center rounded-[12px] border border-line bg-field transition-[border-color] duration-200 field-focus-within ${className}`}
     >
       <NavTarget className="hidden h-full items-center gap-[6px] whitespace-nowrap border-r border-line px-4 text-[13px] font-medium leading-none text-ink-soft lg:flex">
         All Categories

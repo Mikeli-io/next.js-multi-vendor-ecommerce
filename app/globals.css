@@ -188,11 +188,19 @@
     color: var(--iris-600);
   }
 
-  /* A single visible focus treatment for every interactive control. */
-  :focus-visible {
+  /* Visible focus for buttons, links and other interactive elements. Form
+     fields are excluded: they show focus on their own border (or their
+     wrapper's) through the `field-focus` utilities below. */
+  :focus-visible:not(input, select, textarea) {
     outline: none;
     border-color: var(--iris-500);
     box-shadow: 0 0 0 3px var(--iris-100);
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
   }
 }
 
@@ -215,4 +223,49 @@
   );
   background-size: 400px 100%;
   animation: shimmer 1.4s infinite linear;
+}
+
+/* Neutral focus for form fields: the border darkens to --muted, no colored
+   ring. `field-focus` goes on the control itself; `field-focus-within` on a
+   wrapper that draws the field's border around an inner control. */
+@utility field-focus {
+  &:focus {
+    border-color: var(--muted);
+  }
+}
+
+@utility field-focus-within {
+  &:focus-within {
+    border-color: var(--muted);
+  }
+}
+
+/* Entrance for the shared modal (<dialog>): the backdrop fades in, the panel
+   fades in with a slight lift and scale. Skipped for reduced-motion users. */
+@keyframes dialog-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@utility dialog-enter {
+  &[open] {
+    animation: dialog-panel-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  &[open]::backdrop {
+    animation: dialog-backdrop-in 180ms ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &[open],
+    &[open]::backdrop {
+      animation: none;
+    }
+  }
 }
