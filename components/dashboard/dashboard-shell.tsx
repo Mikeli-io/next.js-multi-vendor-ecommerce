@@ -76,9 +76,8 @@ const DASHBOARD_HREF: Record<Role, string> = {
 };
 
 /**
- * Each role's navigation. The vendor keeps its existing Overview items. The
- * admin's Category Setup children have no pages yet, so they carry no `href`
- * and render inert; give each one its route when Categories are built.
+ * Each role's navigation. The vendor keeps its existing Overview items; items
+ * without an `href` (POS) have no page yet and render inert.
  */
 const SIDEBAR: Record<Role, SidebarConfig> = {
   vendor: {
@@ -110,9 +109,9 @@ const SIDEBAR: Record<Role, SidebarConfig> = {
             label: "Category Setup",
             icon: GridIcon,
             children: [
-              { label: "Categories" },
-              { label: "Sub Categories" },
-              { label: "Sub Sub Categories" },
+              { label: "Categories", href: "/admin/categories" },
+              { label: "Sub Categories", href: "/admin/sub-categories" },
+              { label: "Sub Sub Categories", href: "/admin/sub-sub-categories" },
             ],
           },
         ],

@@ -8,12 +8,12 @@ import {
   DeleteBrandButton,
   EditBrandButton,
 } from "@/components/brands/brand-actions";
-import { BrandImage } from "@/components/brands/brand-image";
 import { BRAND_BREADCRUMB } from "@/components/brands/brand-list-parts";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { SectionCard } from "@/components/dashboard/section-card";
 import { ArrowLeftIcon, BoxIcon } from "@/components/ui/icons";
+import { ImageThumb } from "@/components/ui/image-thumb";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getBrand } from "@/lib/brands/queries";
 import { formatDate } from "@/lib/format";
@@ -56,7 +56,7 @@ export default async function BrandDetailsPage({ params }: PageProps<"/admin/bra
 
       <section className="rounded-xl border border-line-soft bg-surface p-5 shadow-xs sm:p-[24px_26px]">
         <div className="flex flex-col gap-6 md:flex-row md:items-start">
-          <BrandImage src={brand.image} name={brand.name} size={120} className="rounded-lg" />
+          <ImageThumb src={brand.image} name={brand.name} size={120} className="rounded-lg" />
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-start justify-between gap-4">

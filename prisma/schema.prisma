@@ -82,3 +82,54 @@ model Brand {
   @@index([status])
   @@map("brands")
 }
+
+/// Top level of the catalog taxonomy: Category → SubCategory → SubSubCategory.
+///
+/// No Product model exists yet, so there are no product relations or stored
+/// product counts; when Product is added, relate it to the deepest level it
+/// is classified under and derive counts from that relation.
+model Category {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  /// Derived from `name` on the server; never user input.
+  slug          String        @unique
+  /// Public URL path of the uploaded image, e.g. /uploads/categories/<uuid>.png
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  subCategories SubCategory[]
+
+  @@map("categories")
+}
+
+model SubCategory {
+  id               String           @id @default(cuid())
+  name             String
+  categoryId       String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  /// Restrict: a category with sub categories cannot be deleted.
+  category         Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subSubCategories SubSubCategory[]
+
+  /// Names are unique within a category ("Accessories" may exist under several).
+  @@unique([categoryId, name])
+  @@index([categoryId])
+  @@map("sub_categories")
+}
+
+/// Its category is derived through `subCategory` — deliberately no categoryId
+/// here, so the two can never disagree.
+model SubSubCategory {
+  id            String      @id @default(cuid())
+  name          String
+  subCategoryId String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  /// Restrict: a sub category with sub sub categories cannot be deleted.
+  subCategory   SubCategory @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
+
+  @@unique([subCategoryId, name])
+  @@index([subCategoryId])
+  @@map("sub_sub_categories")
+}

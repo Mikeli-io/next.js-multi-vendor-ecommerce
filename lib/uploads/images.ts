@@ -4,22 +4,26 @@ import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { BRAND_IMAGE_MAX_BYTES } from "@/lib/validation/brand";
+import { IMAGE_MAX_BYTES } from "@/lib/validation/image";
 
 /**
  * DEVELOPMENT-STAGE STORAGE.
  *
- * Brand images are written to `public/uploads/brands/` on the local disk and
+ * Admin images are written to `public/uploads/<folder>/` on the local disk and
  * served as static files. That only works on a single long-lived server with a
  * persistent filesystem — not on serverless or multi-instance hosting.
  *
  * TODO(storage): replace with persistent object storage (S3 / Cloudflare R2)
- * before production. Keep this module's interface (`saveBrandImage`,
- * `removeBrandImage`) so callers do not change.
+ * before production. Keep this module's interface (`saveImage`,
+ * `removeImage`) so callers do not change.
  */
 
-const PUBLIC_PREFIX = "/uploads/brands/";
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "brands");
+/** Every folder images may be stored in. A fixed list, never caller input. */
+export type ImageFolder = "brands" | "categories";
+
+const publicPrefix = (folder: ImageFolder) => `/uploads/${folder}/`;
+const uploadDir = (folder: ImageFolder) =>
+  path.join(process.cwd(), "public", "uploads", folder);
 
 type Detected = { ext: "jpg" | "png" | "webp" };
 
@@ -43,11 +47,11 @@ function sniffImage(bytes: Uint8Array): Detected | null {
 export class InvalidImageError extends Error {}
 
 /**
- * Validate and store an uploaded brand image. Returns its public URL path.
+ * Validate and store an uploaded image. Returns its public URL path.
  * The stored name is a fresh UUID — the original file name is never used.
  */
-export async function saveBrandImage(file: File): Promise<string> {
-  if (file.size > BRAND_IMAGE_MAX_BYTES) {
+export async function saveImage(folder: ImageFolder, file: File): Promise<string> {
+  if (file.size > IMAGE_MAX_BYTES) {
     throw new InvalidImageError("Image must be 2 MB or smaller.");
   }
 
@@ -58,28 +62,33 @@ export async function saveBrandImage(file: File): Promise<string> {
   }
 
   const fileName = `${randomUUID()}.${detected.ext}`;
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  await writeFile(path.join(UPLOAD_DIR, fileName), bytes);
+  await mkdir(uploadDir(folder), { recursive: true });
+  await writeFile(path.join(uploadDir(folder), fileName), bytes);
 
-  return `${PUBLIC_PREFIX}${fileName}`;
+  return `${publicPrefix(folder)}${fileName}`;
 }
 
 /**
- * Delete a previously stored brand image. Anything that does not resolve to a
- * file directly inside the brand upload folder is ignored, so a crafted path
+ * Delete a previously stored image. Anything that does not resolve to a file
+ * directly inside that folder's upload directory is ignored, so a crafted path
  * can never remove other files. Missing files are not an error.
  */
-export async function removeBrandImage(publicPath: string | null | undefined): Promise<void> {
-  if (!publicPath?.startsWith(PUBLIC_PREFIX)) return;
+export async function removeImage(
+  folder: ImageFolder,
+  publicPath: string | null | undefined,
+): Promise<void> {
+  const prefix = publicPrefix(folder);
+  if (!publicPath?.startsWith(prefix)) return;
 
-  const target = path.resolve(UPLOAD_DIR, publicPath.slice(PUBLIC_PREFIX.length));
-  if (path.dirname(target) !== UPLOAD_DIR) return;
+  const dir = uploadDir(folder);
+  const target = path.resolve(dir, publicPath.slice(prefix.length));
+  if (path.dirname(target) !== dir) return;
 
   try {
     await unlink(target);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.error("removeBrandImage: could not delete", publicPath, error);
+      console.error("removeImage: could not delete", publicPath, error);
     }
   }
 }

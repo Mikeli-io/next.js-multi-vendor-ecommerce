@@ -6,17 +6,26 @@ import {
   BrandRowActions,
   BrandStatusToggle,
 } from "@/components/brands/brand-actions";
-import { BrandImage } from "@/components/brands/brand-image";
 import {
   BRAND_BREADCRUMB,
   BRAND_COLUMNS,
-  BrandTableFrame,
-  BrandToolbar,
-  ListHeading,
+  BRAND_HEADERS,
+  BrandStatusTabs,
 } from "@/components/brands/brand-list-parts";
+import {
+  ListCard,
+  ListHeading,
+  NoMatches,
+  NotAvailable,
+  ResultCount,
+  ROW_CLASS,
+  SearchToolbar,
+  TableFrame,
+} from "@/components/catalog/list-parts";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { SearchIcon, TagIcon } from "@/components/ui/icons";
+import { TagIcon } from "@/components/ui/icons";
+import { ImageThumb } from "@/components/ui/image-thumb";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getBrands } from "@/lib/brands/queries";
 import { brandListParamsSchema } from "@/lib/validation/brand";
@@ -46,9 +55,9 @@ export default async function BrandsPage({ searchParams }: PageProps<"/admin/bra
       breadcrumb={[...BRAND_BREADCRUMB, { label: "Brands" }]}
       user={{ name: admin.name, subtitle: "Master Admin" }}
     >
-      <ListHeading title="Brands" count={total} action={<AddBrandButton />} />
+      <ListHeading title="Brands" icon={TagIcon} count={total} action={<AddBrandButton />} />
 
-      <section className="rounded-xl border border-line-soft bg-surface p-4 shadow-xs sm:p-[22px_24px]">
+      <ListCard>
         {total === 0 ? (
           <EmptyState
             icon={TagIcon}
@@ -58,35 +67,30 @@ export default async function BrandsPage({ searchParams }: PageProps<"/admin/bra
           />
         ) : (
           <>
-            <BrandToolbar params={params} />
+            <SearchToolbar
+              action="/admin/brands"
+              q={params.q}
+              placeholder="Search by Brand Name"
+              keep={{ status: params.status === "all" ? undefined : params.status }}
+              beside={<BrandStatusTabs params={params} />}
+            />
 
             {filtered ? (
-              <p className="mb-3 text-[12.5px] text-muted" aria-live="polite">
-                Showing {brands.length} of {total} brand{total === 1 ? "" : "s"}
-              </p>
+              <ResultCount shown={brands.length} total={total} noun={total === 1 ? "brand" : "brands"} />
             ) : null}
 
             {brands.length === 0 ? (
-              <EmptyState
-                icon={SearchIcon}
-                title="No brands match"
-                body="Try a different name, or clear the search and status filter."
-                action={
-                  <Link href="/admin/brands" className="text-[13.5px] font-semibold">
-                    Clear filters
-                  </Link>
-                }
-              />
+              <NoMatches clearHref="/admin/brands" noun="brands" />
             ) : (
-              <BrandTableFrame>
+              <TableFrame label="Brands" columns={BRAND_COLUMNS} headers={BRAND_HEADERS} minWidth={760}>
                 {brands.map((brand) => (
                   <div
                     key={brand.id}
                     role="row"
-                    className={`${BRAND_COLUMNS} border-t border-line-soft py-[14px] transition-colors duration-150 hover:bg-bg-subtle`}
+                    className={`${BRAND_COLUMNS} ${ROW_CLASS}`}
                   >
                     <span role="cell">
-                      <BrandImage src={brand.image} name={brand.name} />
+                      <ImageThumb src={brand.image} name={brand.name} />
                     </span>
                     <span role="cell" className="min-w-0">
                       <Link
@@ -99,12 +103,8 @@ export default async function BrandsPage({ searchParams }: PageProps<"/admin/bra
                     <span role="cell" className="truncate font-mono text-[12.5px] text-muted">
                       {brand.slug}
                     </span>
-                    <span
-                      role="cell"
-                      className="font-display text-[13.5px] font-bold text-ink"
-                      title={brand.productCount === null ? "Products aren't in the catalog yet" : undefined}
-                    >
-                      {brand.productCount ?? <span className="font-normal text-muted-soft">—</span>}
+                    <span role="cell" className="font-display text-[13.5px] font-bold text-ink">
+                      {brand.productCount ?? <NotAvailable title="Products aren't in the catalog yet" />}
                     </span>
                     <span role="cell">
                       <BrandStatusToggle id={brand.id} name={brand.name} status={brand.status} />
@@ -116,11 +116,11 @@ export default async function BrandsPage({ searchParams }: PageProps<"/admin/bra
                     </span>
                   </div>
                 ))}
-              </BrandTableFrame>
+              </TableFrame>
             )}
           </>
         )}
-      </section>
+      </ListCard>
     </DashboardShell>
   );
 }

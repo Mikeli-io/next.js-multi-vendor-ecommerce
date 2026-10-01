@@ -1,17 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 import { requireAdmin } from "@/lib/auth/guards";
+import { isForeignKeyViolation, isUniqueViolation, violatedTarget } from "@/lib/db-errors";
 import { countBrandProducts } from "@/lib/brands/queries";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueSlug, slugify } from "@/lib/slug";
-import {
-  InvalidImageError,
-  removeBrandImage,
-  saveBrandImage,
-} from "@/lib/uploads/brand-images";
+import { InvalidImageError, removeImage, saveImage } from "@/lib/uploads/images";
 import { brandFormSchema, brandIdSchema } from "@/lib/validation/brand";
 import { toFieldErrors } from "@/lib/validation/field-errors";
 import type { BrandActionResult } from "./brand-state";
@@ -59,12 +56,8 @@ async function nameTakenBy(name: string, exceptId?: string) {
   return Boolean(found && found.id !== exceptId);
 }
 
-function isUniqueViolation(error: unknown): error is Prisma.PrismaClientKnownRequestError {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
-}
-
 function uniqueViolationResult(error: Prisma.PrismaClientKnownRequestError): BrandActionResult {
-  const target = String(error.meta?.target ?? "");
+  const target = violatedTarget(error);
   // A slug race is resolved by simply retrying (the next suffix is picked).
   return target.includes("slug")
     ? { ok: false, formError: "Another brand was just saved with a similar name. Please try again." }
@@ -82,7 +75,7 @@ export async function createBrand(formData: FormData): Promise<BrandActionResult
 
   let imagePath: string | null = null;
   try {
-    if (image) imagePath = await saveBrandImage(image);
+    if (image) imagePath = await saveImage("brands", image);
 
     const slug = await generateUniqueSlug(name, slugTakenBy(), "brand");
     const brand = await prisma.brand.create({
@@ -94,7 +87,7 @@ export async function createBrand(formData: FormData): Promise<BrandActionResult
     return { ok: true, message: `"${name}" was created.` };
   } catch (error) {
     // Nothing references an image stored for a write that failed.
-    await removeBrandImage(imagePath);
+    await removeImage("brands", imagePath);
     if (error instanceof InvalidImageError) {
       return { ok: false, fieldErrors: { image: [error.message] } };
     }
@@ -124,7 +117,7 @@ export async function updateBrand(id: string, formData: FormData): Promise<Brand
 
   let newImage: string | null = null;
   try {
-    if (image) newImage = await saveBrandImage(image);
+    if (image) newImage = await saveImage("brands", image);
 
     // The slug follows the name. It is only regenerated when the name's slug
     // form changes, so fixing capitalisation does not churn the URL.
@@ -140,7 +133,7 @@ export async function updateBrand(id: string, formData: FormData): Promise<Brand
       select: { id: true },
     });
   } catch (error) {
-    await removeBrandImage(newImage);
+    await removeImage("brands", newImage);
     if (error instanceof InvalidImageError) {
       return { ok: false, fieldErrors: { image: [error.message] } };
     }
@@ -150,7 +143,7 @@ export async function updateBrand(id: string, formData: FormData): Promise<Brand
   }
 
   // Only once the row points at the new file is the old one safe to delete.
-  if (newImage) await removeBrandImage(existing.image);
+  if (newImage) await removeImage("brands", existing.image);
 
   revalidateBrands(id);
   return { ok: true, message: `"${name}" was updated.` };
@@ -182,7 +175,7 @@ export async function deleteBrand(id: string): Promise<BrandActionResult> {
     await prisma.brand.delete({ where: { id } });
   } catch (error) {
     // Foreign-key violation: products started referencing the brand meanwhile.
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+    if (isForeignKeyViolation(error)) {
       return {
         ok: false,
         formError: `"${brand.name}" is used by products, so it can't be deleted. Deactivate it instead.`,
@@ -192,7 +185,7 @@ export async function deleteBrand(id: string): Promise<BrandActionResult> {
     return { ok: false, formError: UNEXPECTED };
   }
 
-  await removeBrandImage(brand.image);
+  await removeImage("brands", brand.image);
   revalidateBrands(id);
   return { ok: true, message: `"${brand.name}" was deleted.` };
 }
