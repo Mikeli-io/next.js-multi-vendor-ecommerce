@@ -43,8 +43,7 @@ export default async function BrandDetailsPage({ params }: PageProps<"/admin/bra
   return (
     <DashboardShell
       role="admin"
-      section="catalog"
-      breadcrumb={[...BRAND_BREADCRUMB, { label: "Brand Setup", href: "/admin/brands" }, { label: brand.name }]}
+      breadcrumb={[...BRAND_BREADCRUMB, { label: "Brands", href: "/admin/brands" }, { label: brand.name }]}
       user={{ name: admin.name, subtitle: "Master Admin" }}
     >
       <Link

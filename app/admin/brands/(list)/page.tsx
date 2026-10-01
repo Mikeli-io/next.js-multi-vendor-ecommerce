@@ -43,8 +43,7 @@ export default async function BrandsPage({ searchParams }: PageProps<"/admin/bra
   return (
     <DashboardShell
       role="admin"
-      section="catalog"
-      breadcrumb={[...BRAND_BREADCRUMB, { label: "Brand Setup" }]}
+      breadcrumb={[...BRAND_BREADCRUMB, { label: "Brands" }]}
       user={{ name: admin.name, subtitle: "Master Admin" }}
     >
       <ListHeading title="Brands" count={total} action={<AddBrandButton />} />

@@ -12,11 +12,7 @@ import {
 import { usePathname } from "next/navigation";
 
 import {
-  BagIcon,
-  BarChartIcon,
   BellIcon,
-  BoxIcon,
-  CartIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -24,6 +20,7 @@ import {
   DashboardIcon,
   ExpandIcon,
   GlobeIcon,
+  GridIcon,
   HomeIcon,
   type IconProps,
   LockIcon,
@@ -33,43 +30,42 @@ import {
   MonitorIcon,
   SearchIcon,
   SlidersIcon,
-  SpeakerIcon,
+  TagIcon,
   UserIcon,
-  UsersIcon,
 } from "@/components/ui/icons";
 import { NavTarget } from "@/components/ui/nav-target";
 import { signOutAction } from "@/lib/actions/login";
 
 /**
- * The seller/admin app shell from DESIGN_SYSTEM.md §9: a 64px dark icon rail,
- * a 236px white sidebar and a 64px topbar over a `--bg-dash` canvas.
+ * The seller/admin app shell: a 236px ink sidebar and a 64px white topbar
+ * over a `--bg-dash` canvas. The sidebar is the only dashboard navigation.
  *
- * Only destinations that exist are links. Everything else in the rail,
- * sidebar and menus is drawn per the design but inert (see `NavTarget`).
+ * Only destinations that exist are links. Items for pages not built yet are
+ * drawn but inert (see `NavTarget`).
  *
- * At ≥1024px the toggle collapses the rail and sidebar, as in the design.
- * Below that they would crowd the content, so they start hidden and the same
- * toggle opens them as a drawer.
+ * At ≥1024px the topbar toggle shows or hides the sidebar, as in the designs.
+ * Below that the sidebar would crowd the content, so it starts hidden and the
+ * same toggle opens it as a drawer.
  */
 
 type Role = "vendor" | "admin";
 
-type NavItem = {
+type NavLink = {
   label: string;
   icon?: ComponentType<IconProps>;
+  /** Omit while the page does not exist yet; the item renders inert. */
   href?: string;
 };
 
-/** Primary sections a page can belong to; decides the rail highlight and sidebar. */
-export type ShellSection = "home" | "catalog";
+/** A sidebar item; `children` makes it an expandable group (one level deep). */
+type NavItem = NavLink & { children?: NavLink[] };
 
-type RailItem = NavItem & { icon: ComponentType<IconProps>; section?: ShellSection };
+type NavGroup = { title: string; items: NavItem[] };
 
 type SidebarConfig = {
   title: string;
-  /** Home's header carries an icon chip in the designs; section headers do not. */
-  icon?: ComponentType<IconProps>;
-  groups: { title: string; items: NavItem[] }[];
+  icon: ComponentType<IconProps>;
+  groups: NavGroup[];
 };
 
 export type Crumb = { label: string; href?: string };
@@ -80,91 +76,54 @@ const DASHBOARD_HREF: Record<Role, string> = {
 };
 
 /**
- * Primary sections, named after the section each icon opens in the design
- * files (the sidebar title of the page that highlights it) and PRD §4.3/§4.4.
- * Icons with no section defined in the designs or PRD are deliberately left
- * out rather than given a guessed name; add them back when their section is.
- * Admin order follows the admin section pages (People before Reports).
+ * Each role's navigation. The vendor keeps its existing Overview items. The
+ * admin's Category Setup children have no pages yet, so they carry no `href`
+ * and render inert; give each one its route when Categories are built.
  */
-const RAIL: Record<Role, RailItem[]> = {
-  vendor: [
-    { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.vendor, section: "home" },
-    { label: "Catalog", icon: BoxIcon },
-    { label: "Orders", icon: BagIcon },
-    { label: "Marketing", icon: SpeakerIcon },
-    { label: "Reports", icon: BarChartIcon },
-  ],
-  admin: [
-    { label: "Home", icon: HomeIcon, href: DASHBOARD_HREF.admin, section: "home" },
-    // Brand Setup is the only Catalog page built so far, so the section opens there.
-    { label: "Catalog", icon: BoxIcon, href: "/admin/brands", section: "catalog" },
-    { label: "Orders", icon: BagIcon },
-    { label: "People", icon: UsersIcon },
-    { label: "Reports", icon: BarChartIcon },
-  ],
-};
-
-const HOME_SIDEBAR = (role: Role): SidebarConfig => ({
-  title: "Home",
-  icon: HomeIcon,
-  groups: [
-    {
-      title: "Overview",
-      items: [
-        { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF[role] },
-        { label: "POS", icon: MonitorIcon },
-      ],
-    },
-  ],
-});
-
-/**
- * Secondary sidebars per section. The admin Catalog groups mirror
- * `AdminProductList.dc.html`; only pages that exist are links (Brand Setup).
- */
-const SIDEBAR: Record<Role, Partial<Record<ShellSection, SidebarConfig>>> = {
-  vendor: { home: HOME_SIDEBAR("vendor") },
+const SIDEBAR: Record<Role, SidebarConfig> = {
+  vendor: {
+    title: "Home",
+    icon: HomeIcon,
+    groups: [
+      {
+        title: "Overview",
+        items: [
+          { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.vendor },
+          { label: "POS", icon: MonitorIcon },
+        ],
+      },
+    ],
+  },
   admin: {
-    home: HOME_SIDEBAR("admin"),
-    catalog: {
-      title: "Catalog",
-      groups: [
-        {
-          title: "In House Products",
-          items: [
-            { label: "Product List" },
-            { label: "Add New Product" },
-            { label: "Limited Stock" },
-            { label: "Request Restock List" },
-            { label: "Bulk Import" },
-          ],
-        },
-        {
-          title: "Vendor Products",
-          items: [
-            { label: "New Products Request" },
-            { label: "Product Update Request" },
-            { label: "Approved Products" },
-            { label: "Denied Products" },
-          ],
-        },
-        {
-          title: "Organization",
-          items: [
-            { label: "Category Setup" },
-            { label: "Brand Setup", href: "/admin/brands" },
-            { label: "Product Attribute Setup" },
-            { label: "Product Gallery" },
-          ],
-        },
-      ],
-    },
+    title: "Home",
+    icon: HomeIcon,
+    groups: [
+      {
+        title: "Overview",
+        items: [{ label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.admin }],
+      },
+      {
+        title: "Catalog",
+        items: [
+          { label: "Brands", icon: TagIcon, href: "/admin/brands" },
+          {
+            label: "Category Setup",
+            icon: GridIcon,
+            children: [
+              { label: "Categories" },
+              { label: "Sub Categories" },
+              { label: "Sub Sub Categories" },
+            ],
+          },
+        ],
+      },
+    ],
   },
 };
 
 const DEFAULT_CRUMBS: Crumb[] = [{ label: "Home", href: "/" }, { label: "Dashboard" }];
 
-const PROFILE_MENU: Record<Role, RailItem[]> = {
+const PROFILE_MENU: Record<Role, Array<NavLink & { icon: ComponentType<IconProps> }>> = {
   vendor: [
     { label: "Profile Setting", icon: UserIcon },
     { label: "Change Password", icon: LockIcon },
@@ -181,16 +140,38 @@ export type ShellUser = {
   subtitle: string;
 };
 
+/** Active for the page itself and anything beneath it (e.g. /admin/brands/[id]). */
+function isActive(href: string | undefined, pathname: string): boolean {
+  return Boolean(href && (pathname === href || pathname.startsWith(`${href}/`)));
+}
+
+/**
+ * Narrow the navigation to a menu search. A group whose own label matches
+ * keeps all its children; otherwise it keeps only the matching ones.
+ */
+function filterGroups(groups: NavGroup[], query: string): NavGroup[] {
+  if (!query) return groups;
+  const matches = (label: string) => label.toLowerCase().includes(query);
+
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.flatMap((item): NavItem[] => {
+        if (matches(item.label)) return [item];
+        const children = item.children?.filter((child) => matches(child.label));
+        return children?.length ? [{ ...item, children }] : [];
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 export function DashboardShell({
   role,
   user,
-  section = "home",
   breadcrumb = DEFAULT_CRUMBS,
   children,
 }: {
   role: Role;
-  /** The primary section this page belongs to. */
-  section?: ShellSection;
   breadcrumb?: Crumb[];
   /**
    * `undefined` while loading renders the profile chip as a skeleton; `null`
@@ -199,13 +180,13 @@ export function DashboardShell({
   user?: ShellUser | null;
   children: ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [menuQuery, setMenuQuery] = useState("");
 
   function toggleNavigation() {
     if (window.matchMedia("(min-width: 1024px)").matches) {
-      setCollapsed((c) => !c);
+      setSidebarHidden((hidden) => !hidden);
     } else {
       setDrawerOpen((o) => !o);
     }
@@ -225,27 +206,18 @@ export function DashboardShell({
   }, [drawerOpen]);
 
   const pathname = usePathname();
-  const sidebar = SIDEBAR[role][section] ?? SIDEBAR[role].home!;
   const query = menuQuery.trim().toLowerCase();
-  const sidebarGroups = sidebar.groups
-    .map((group) => ({
-      ...group,
-      items: query
-        ? group.items.filter((item) => item.label.toLowerCase().includes(query))
-        : group.items,
-    }))
-    .filter((group) => group.items.length > 0);
+  const sidebar = SIDEBAR[role];
+  const groups = filterGroups(sidebar.groups, query);
 
   return (
     <div className="flex min-h-dvh bg-bg-dash">
-      {/* Desktop navigation, in flow. Collapsing keeps the rail, icon-only,
-          and hides the secondary sidebar. */}
-      <div className="sticky top-0 hidden h-dvh flex-none lg:flex">
-        <Rail role={role} section={section} labelled={!collapsed} />
-        {!collapsed ? (
-          <Sidebar config={sidebar} groups={sidebarGroups} pathname={pathname} />
-        ) : null}
-      </div>
+      {/* Desktop navigation, in flow. */}
+      {!sidebarHidden ? (
+        <div className="sticky top-0 hidden h-dvh flex-none lg:flex">
+          <Sidebar config={sidebar} groups={groups} pathname={pathname} searching={Boolean(query)} />
+        </div>
+      ) : null}
 
       {/* Mobile / tablet navigation, as a drawer. */}
       {drawerOpen ? (
@@ -257,11 +229,11 @@ export function DashboardShell({
             className="absolute inset-0 bg-[rgba(20,18,31,.55)] backdrop-blur-[3px]"
           />
           <div className="relative flex h-full w-fit max-w-[calc(100vw-48px)] shadow-xl">
-            <Rail role={role} section={section} labelled />
             <Sidebar
               config={sidebar}
-              groups={sidebarGroups}
+              groups={groups}
               pathname={pathname}
+              searching={Boolean(query)}
               onClose={() => setDrawerOpen(false)}
             />
           </div>
@@ -274,17 +246,16 @@ export function DashboardShell({
             type="button"
             onClick={toggleNavigation}
             aria-label="Toggle navigation"
-            aria-expanded={drawerOpen || !collapsed}
+            aria-expanded={drawerOpen || !sidebarHidden}
             className="grid size-[30px] flex-none cursor-pointer place-items-center rounded-sm border border-line bg-surface text-muted transition-colors duration-150 hover:bg-field"
           >
             <span className="lg:hidden">
               <MenuIcon />
             </span>
             <span className="hidden lg:block">
-              {collapsed ? <MenuIcon /> : <ChevronLeftIcon />}
+              {sidebarHidden ? <MenuIcon /> : <ChevronLeftIcon />}
             </span>
           </button>
-
           <nav
             aria-label="Breadcrumb"
             className="hidden items-center gap-2 text-[13px] font-medium leading-none sm:flex"
@@ -344,93 +315,29 @@ export function DashboardShell({
   );
 }
 
-/**
- * The dark primary rail. Expanded, each icon carries its section name beneath
- * it (the rail widens from 64px to 80px); collapsed, it is icon-only. Icon
- * tiles, colours and the active state are the same in both.
- */
-function Rail({
-  role,
-  section,
-  labelled,
-}: {
-  role: Role;
-  section: ShellSection;
-  labelled: boolean;
-}) {
-  return (
-    <nav
-      aria-label="Sections"
-      className={`flex h-full flex-none flex-col items-center overflow-y-auto bg-ink py-4 transition-[width] duration-200 ${
-        labelled ? "w-20 gap-3" : "w-16 gap-2"
-      }`}
-    >
-      <span className="mb-[14px] grid size-[38px] flex-none place-items-center rounded-[11px] bg-iris-500 text-surface">
-        <CartIcon size={20} />
-      </span>
-      {RAIL[role].map(({ label, icon: Icon, href, section: itemSection }) => {
-        const active = itemSection === section;
-        return (
-          <NavTarget
-            key={label}
-            href={href}
-            // Visible text names the link when labelled; otherwise the icon needs one.
-            label={labelled ? undefined : label}
-            className={`group flex w-full flex-none flex-col items-center gap-1 transition-colors duration-150 ${
-              active
-                ? "text-surface hover:text-surface"
-                : "text-on-ink-muted hover:text-surface"
-            }`}
-          >
-            <span
-              className={`grid size-10 place-items-center rounded-[11px] ${
-                active ? "bg-iris-500" : ""
-              }`}
-            >
-              <Icon size={20} strokeWidth={1.9} />
-            </span>
-            {labelled ? (
-              <span
-                className={`max-w-full truncate px-1 text-[10.5px] leading-none ${
-                  active ? "font-semibold" : "font-medium"
-                }`}
-              >
-                {label}
-              </span>
-            ) : null}
-          </NavTarget>
-        );
-      })}
-    </nav>
-  );
-}
-
 function Sidebar({
   config,
   groups,
   pathname,
+  searching,
   onClose,
 }: {
   config: SidebarConfig;
-  groups: SidebarConfig["groups"];
+  groups: NavGroup[];
   pathname: string;
+  /** A menu search is active: expandable groups show their matches open. */
+  searching: boolean;
   onClose?: () => void;
 }) {
   const HeaderIcon = config.icon;
 
   return (
-    <aside className="h-full w-[236px] flex-none overflow-y-auto border-r border-line bg-surface px-4 py-5">
-      <div className="mb-4 flex items-center gap-[10px] border-b border-line-soft px-2 pb-5">
-        {HeaderIcon ? (
-          <span className="grid size-[34px] place-items-center rounded-[10px] bg-iris-50 text-iris-500">
-            <HeaderIcon />
-          </span>
-        ) : null}
-        <span
-          className={`font-display font-bold leading-none text-ink ${
-            HeaderIcon ? "text-[16px]" : "text-[17px]"
-          }`}
-        >
+    <aside className="h-full w-[236px] flex-none overflow-y-auto border-r border-iris-600 bg-ink px-4 py-5">
+      <div className="mb-4 flex items-center gap-[10px] border-b border-iris-400 px-2 pb-5">
+        <span className="grid size-[34px] place-items-center rounded-[10px] bg-iris-50 text-iris-500">
+          <HeaderIcon />
+        </span>
+        <span className="font-display text-[16px] font-bold leading-none text-surface">
           {config.title}
         </span>
         {onClose ? (
@@ -438,48 +345,120 @@ function Sidebar({
             type="button"
             onClick={onClose}
             aria-label="Close navigation"
-            className="ml-auto grid size-8 cursor-pointer place-items-center rounded-sm text-muted hover:bg-field"
+            className="ml-auto grid size-8 cursor-pointer place-items-center rounded-sm text-iris-100 hover:bg-iris-600 hover:text-surface"
           >
             <CloseIcon size={16} />
           </button>
         ) : null}
       </div>
 
-      {groups.map((group) => (
-        <div key={group.title} className="mb-[6px]">
-          <p className="mb-[10px] mt-[14px] px-2 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-muted-soft first:mt-0">
-            {group.title}
-          </p>
-          <div className="flex flex-col gap-[3px]">
-            {group.items.map(({ label, icon: Icon, href }) => {
-              // Active for the page itself and anything beneath it (/admin/brands/[id]).
-              const active = Boolean(
-                href && (pathname === href || pathname.startsWith(`${href}/`)),
-              );
-              return (
-                <NavTarget
-                  key={label}
-                  href={href}
-                  className={`flex items-center gap-[11px] rounded-[10px] px-3 text-[13.5px] leading-none transition-colors duration-150 ${
-                    Icon ? "py-[10px]" : "py-[9px]"
-                  } ${
-                    active
-                      ? "bg-iris-50 font-semibold text-iris-500 hover:text-iris-500"
-                      : "font-medium text-ink-soft hover:bg-field hover:text-ink-soft"
-                  }`}
-                >
-                  {Icon ? <Icon size={17} strokeWidth={1.9} /> : null}
-                  {label}
-                </NavTarget>
-              );
-            })}
+      <nav aria-label="Dashboard">
+        {groups.map((group, index) => (
+          <div key={group.title} className="mb-[6px]">
+            <p
+              className={`mb-[10px] px-2 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-iris-100 ${
+                index > 0 ? "mt-[18px]" : ""
+              }`}
+            >
+              {group.title}
+            </p>
+            <div className="flex flex-col gap-[3px]">
+              {group.items.map((item) =>
+                item.children ? (
+                  <SidebarGroupItem
+                    key={item.label}
+                    item={item}
+                    pathname={pathname}
+                    forceOpen={searching}
+                  />
+                ) : (
+                  <SidebarLink key={item.label} item={item} active={isActive(item.href, pathname)} />
+                ),
+              )}
+            </div>
           </div>
-        </div>
-      ))}
-      {!groups.length ? (
-        <p className="px-3 py-2 text-[12.5px] text-muted">No matching menu items.</p>
-      ) : null}
+        ))}
+        {!groups.length ? (
+          <p className="px-3 py-2 text-[12.5px] text-iris-100">No matching menu items.</p>
+        ) : null}
+      </nav>
     </aside>
+  );
+}
+
+const ROW =
+  "flex w-full items-center gap-[11px] rounded-[10px] px-3 py-[10px] text-[13.5px] leading-none transition-colors duration-150";
+// On the ink sidebar: idle rows are white; hovering one previews the active
+// look — the lavender iris-50 pill with iris-700 text (the design system's
+// "text on light iris" pairing).
+const ROW_ACTIVE = "bg-iris-50 font-semibold text-iris-700 hover:text-iris-700";
+const ROW_IDLE = "font-medium text-surface hover:bg-iris-50 hover:text-iris-700";
+
+function SidebarLink({ item, active }: { item: NavLink; active: boolean }) {
+  const Icon = item.icon;
+  return (
+    <NavTarget href={item.href} className={`${ROW} ${active ? ROW_ACTIVE : ROW_IDLE}`}>
+      {Icon ? <Icon size={17} strokeWidth={1.9} /> : null}
+      {item.label}
+    </NavTarget>
+  );
+}
+
+/**
+ * An expandable item (e.g. Category Setup). Starts open when one of its
+ * children is the current page, and while a menu search is narrowing it.
+ */
+function SidebarGroupItem({
+  item,
+  pathname,
+  forceOpen,
+}: {
+  item: NavItem;
+  pathname: string;
+  forceOpen: boolean;
+}) {
+  const children = item.children ?? [];
+  const containsActive = children.some((child) => isActive(child.href, pathname));
+  const [open, setOpen] = useState(containsActive);
+  const expanded = open || forceOpen;
+  const Icon = item.icon;
+  const panelId = `nav-${item.label.toLowerCase().replace(/\W+/g, "-")}`;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        className={`group ${ROW} cursor-pointer ${containsActive ? "font-semibold text-surface hover:bg-iris-50 hover:text-iris-700" : ROW_IDLE}`}
+      >
+        {Icon ? <Icon size={17} strokeWidth={1.9} /> : null}
+        <span className="flex-1 text-left">{item.label}</span>
+        <ChevronDownIcon
+          size={15}
+          className={`text-iris-100 transition-[transform,color] duration-200 group-hover:text-iris-700 ${expanded ? "rotate-180" : ""}`}
+        />
+      </button>
+      {expanded ? (
+        <div id={panelId} className="mt-[3px] flex flex-col gap-[2px]">
+          {children.map((child) => {
+            const active = isActive(child.href, pathname);
+            return (
+              <NavTarget
+                key={child.label}
+                href={child.href}
+                className={`flex w-full items-center rounded-[10px] py-[9px] pl-[40px] pr-3 text-[13px] leading-none transition-colors duration-150 ${
+                  active ? ROW_ACTIVE : ROW_IDLE
+                }`}
+              >
+                {child.label}
+              </NavTarget>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

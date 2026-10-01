@@ -3,7 +3,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default function BrandDetailsLoading() {
   return (
-    <DashboardShell role="admin" section="catalog" breadcrumb={[...BRAND_BREADCRUMB, { label: "Brand Setup" }]}>
+    <DashboardShell role="admin" breadcrumb={[...BRAND_BREADCRUMB, { label: "Brands" }]}>
       <div aria-busy="true" aria-label="Loading brand" className="flex flex-col gap-[22px]">
         <div className="skeleton h-4 w-24 rounded-[5px]" />
         <div className="flex gap-6 rounded-xl border border-line-soft bg-surface p-6 shadow-xs">

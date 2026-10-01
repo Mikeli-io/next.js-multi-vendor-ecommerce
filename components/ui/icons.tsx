@@ -153,19 +153,7 @@ export const BagIcon = icon(
   </>,
 );
 
-export const SendIcon = icon(
-  <>
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-  </>,
-);
 
-export const SpeakerIcon = icon(
-  <>
-    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-  </>,
-);
 
 export const BarChartIcon = icon(
   <>

@@ -13,8 +13,7 @@ export default async function BrandNotFound() {
   return (
     <DashboardShell
       role="admin"
-      section="catalog"
-      breadcrumb={[...BRAND_BREADCRUMB, { label: "Brand Setup", href: "/admin/brands" }]}
+      breadcrumb={[...BRAND_BREADCRUMB, { label: "Brands", href: "/admin/brands" }]}
       user={user ? { name: user.name, subtitle: "Master Admin" } : null}
     >
       <EmptyState

@@ -9,7 +9,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 /** The list design's loading state: toolbar placeholder and shimmering rows. */
 export default function BrandsLoading() {
   return (
-    <DashboardShell role="admin" section="catalog" breadcrumb={[...BRAND_BREADCRUMB, { label: "Brand Setup" }]}>
+    <DashboardShell role="admin" breadcrumb={[...BRAND_BREADCRUMB, { label: "Brands" }]}>
       <ListHeading title="Brands" />
       <section
         aria-busy="true"
