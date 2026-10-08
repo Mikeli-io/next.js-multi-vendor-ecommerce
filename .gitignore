@@ -47,3 +47,6 @@ next-env.d.ts
 
 # locally stored uploads (development-stage storage, see lib/uploads)
 /public/uploads/
+
+# Private uploads (e.g. vendor TIN certificates) — never served statically.
+/storage/

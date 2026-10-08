@@ -269,3 +269,48 @@ export function TableSkeleton({
     </div>
   );
 }
+
+/**
+ * Link tabs that filter a list by one URL param (e.g. All / Active / Inactive).
+ * The `all` value is the default and is omitted from the URL; `keep` carries
+ * the other filters (such as the search) across tab changes.
+ */
+export function FilterTabs({
+  label,
+  path,
+  param,
+  current,
+  options,
+  keep = {},
+}: {
+  label: string;
+  path: string;
+  param: string;
+  current: string;
+  options: ReadonlyArray<{ value: string; label: string; count?: number }>;
+  keep?: Record<string, string | undefined>;
+}) {
+  return (
+    <nav aria-label={label} className="flex max-w-full gap-1 overflow-x-auto rounded-[11px] bg-track p-1">
+      {options.map((option) => {
+        const active = current === option.value;
+        return (
+          <Link
+            key={option.value}
+            href={listHref(path, { ...keep, [param]: option.value === "all" ? undefined : option.value })}
+            aria-current={active ? "page" : undefined}
+            className={`flex h-[38px] flex-none items-center gap-2 rounded-sm px-4 text-[12.5px] leading-none transition-colors duration-150 ${
+              active ? "bg-surface font-semibold text-ink shadow-xs hover:text-ink" : "font-medium text-muted hover:text-ink"
+            }`}
+          >
+            {option.label}
+            {option.count !== undefined ? (
+              <span className="font-display text-[11px] font-bold text-muted-soft">{option.count}</span>
+            ) : null}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+

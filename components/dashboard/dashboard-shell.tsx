@@ -29,6 +29,7 @@ import {
   MessageIcon,
   MonitorIcon,
   SearchIcon,
+  ShopFrontIcon,
   SlidersIcon,
   TagIcon,
   UserIcon,
@@ -112,6 +113,20 @@ const SIDEBAR: Record<Role, SidebarConfig> = {
               { label: "Categories", href: "/admin/categories" },
               { label: "Sub Categories", href: "/admin/sub-categories" },
               { label: "Sub Sub Categories", href: "/admin/sub-sub-categories" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "People",
+        items: [
+          {
+            label: "Vendor Manage",
+            icon: ShopFrontIcon,
+            children: [
+              { label: "Vendor Approval", href: "/admin/vendor-approval" },
+              { label: "Add New Vendor", href: "/admin/vendors/new" },
+              { label: "Vendor List", href: "/admin/vendors" },
             ],
           },
         ],
@@ -417,7 +432,13 @@ function SidebarGroupItem({
   forceOpen: boolean;
 }) {
   const children = item.children ?? [];
-  const containsActive = children.some((child) => isActive(child.href, pathname));
+  // The most specific match wins, so /admin/vendors/new highlights "Add New
+  // Vendor" only, not also "Vendor List" (/admin/vendors).
+  const activeHref = children
+    .map((child) => child.href)
+    .filter((href) => isActive(href, pathname))
+    .sort((a, b) => (b?.length ?? 0) - (a?.length ?? 0))[0];
+  const containsActive = Boolean(activeHref);
   const [open, setOpen] = useState(containsActive);
   const expanded = open || forceOpen;
   const Icon = item.icon;
@@ -442,7 +463,7 @@ function SidebarGroupItem({
       {expanded ? (
         <div id={panelId} className="mt-[3px] flex flex-col gap-[2px]">
           {children.map((child) => {
-            const active = isActive(child.href, pathname);
+            const active = child.href === activeHref;
             return (
               <NavTarget
                 key={child.label}

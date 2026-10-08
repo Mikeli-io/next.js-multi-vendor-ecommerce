@@ -20,6 +20,7 @@ export function ConfirmDialog({
   confirmLabel,
   pending = false,
   error,
+  confirmVariant = "destructive",
 }: {
   open: boolean;
   onClose: () => void;
@@ -29,6 +30,8 @@ export function ConfirmDialog({
   confirmLabel: string;
   pending?: boolean;
   error?: string;
+  /** Red for destructive confirmations (default); primary for positive ones. */
+  confirmVariant?: "destructive" | "primary";
 }) {
   return (
     <Dialog open={open} onClose={onClose} title={title} size="sm" dismissible={!pending}>
@@ -51,7 +54,7 @@ export function ConfirmDialog({
         <Button
           type="button"
           size="sm"
-          variant="destructive"
+          variant={confirmVariant}
           onClick={onConfirm}
           disabled={pending}
         >

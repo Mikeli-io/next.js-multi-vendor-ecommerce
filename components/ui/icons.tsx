@@ -290,6 +290,15 @@ export const CheckSquareIcon = icon(
   </>,
 );
 
+export const InfoIcon = icon(
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </>,
+  { size: 14 },
+);
+
 export const CameraIcon = icon(
   <>
     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -463,6 +472,24 @@ export const ReceiptIcon = icon(
     <path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 3 2V2l-3 2-3-2-3 2-3-2-3 2z" />
     <line x1="8" y1="9" x2="16" y2="9" />
     <line x1="8" y1="13" x2="14" y2="13" />
+  </>,
+);
+
+// ---- Uploads ----------------------------------------------------------------
+
+export const ImageIcon = icon(
+  <>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" />
+  </>,
+  { size: 28, strokeWidth: 1.7 },
+);
+
+export const FileIcon = icon(
+  <>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
   </>,
 );
 

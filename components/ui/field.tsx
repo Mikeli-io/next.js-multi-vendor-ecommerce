@@ -2,7 +2,7 @@
 
 import { useId, useState, type ComponentProps, type ReactNode } from "react";
 
-import { EyeIcon, EyeOffIcon } from "./icons";
+import { EyeIcon, EyeOffIcon, InfoIcon } from "./icons";
 
 /**
  * Form controls matching the auth designs: 50px tall, 12px radius, inset
@@ -38,6 +38,26 @@ function RequiredMark() {
   return <span className="text-error">*</span>;
 }
 
+/** The designs' ⓘ after a label: a short explanation on hover and for screen readers. */
+function LabelInfo({ text }: { text?: string }) {
+  if (!text) return null;
+  return (
+    <span title={text} className="inline-flex h-[13px] items-center align-top text-muted-soft">
+      <InfoIcon />
+      <span className="sr-only">({text})</span>
+    </span>
+  );
+}
+
+function HintText({ id, hint }: { id: string; hint?: string }) {
+  if (!hint) return null;
+  return (
+    <p id={id} className="mt-[7px] text-[12px] leading-[1.4] text-muted-soft">
+      {hint}
+    </p>
+  );
+}
+
 type FieldProps = ComponentProps<"input"> & {
   label: string;
   errors?: string[];
@@ -47,6 +67,8 @@ type FieldProps = ComponentProps<"input"> & {
   labelAside?: ReactNode;
   /** Muted helper text under the control, shown when there is no error. */
   hint?: string;
+  /** Explanation behind the design's ⓘ icon after the label. */
+  info?: string;
 };
 
 export function Field({
@@ -55,6 +77,7 @@ export function Field({
   showRequiredMark,
   labelAside,
   hint,
+  info,
   className,
   ...props
 }: FieldProps) {
@@ -66,7 +89,7 @@ export function Field({
     <div className={className}>
       <div className="mb-[9px] flex items-center justify-between gap-3">
         <label htmlFor={id} className={LABEL}>
-          {label} {showRequiredMark ? <RequiredMark /> : null}
+          {label} {showRequiredMark ? <RequiredMark /> : null} <LabelInfo text={info} />
         </label>
         {labelAside}
       </div>
@@ -80,11 +103,62 @@ export function Field({
         />
       </div>
       <ErrorText id={errorId} errors={errors} />
-      {hint && !hasError ? (
-        <p id={`${id}-hint`} className="mt-[7px] text-[12px] leading-[1.4] text-muted-soft">
-          {hint}
-        </p>
-      ) : null}
+      {hasError ? null : <HintText id={`${id}-hint`} hint={hint} />}
+    </div>
+  );
+}
+
+/**
+ * Multi-line text with a character counter under it (the Add New Vendor
+ * design's shop address). Controlled, since the counter tracks the value.
+ */
+export function TextAreaField({
+  label,
+  errors,
+  showRequiredMark,
+  className,
+  value,
+  maxLength,
+  rows = 2,
+  ...props
+}: Omit<ComponentProps<"textarea">, "value"> & {
+  label: string;
+  errors?: string[];
+  showRequiredMark?: boolean;
+  value: string;
+  maxLength: number;
+}) {
+  const id = useId();
+  const errorId = `${id}-error`;
+  const hasError = Boolean(errors?.length);
+
+  return (
+    <div className={className}>
+      <label htmlFor={id} className={`${LABEL} mb-[9px]`}>
+        {label} {showRequiredMark ? <RequiredMark /> : null}
+      </label>
+      <textarea
+        {...props}
+        id={id}
+        rows={rows}
+        value={value}
+        maxLength={maxLength}
+        aria-invalid={hasError || undefined}
+        aria-describedby={hasError ? errorId : undefined}
+        className={`block w-full resize-y rounded-[12px] border bg-bg-subtle px-[15px] py-[14px] text-[14px] leading-[1.45] text-ink outline-none transition-[border-color,background-color] duration-200 placeholder:text-muted-soft focus:bg-surface ${
+          hasError ? "border-error" : "field-focus border-line"
+        }`}
+      />
+      <div className="mt-[7px] flex items-start justify-between gap-3">
+        {hasError ? (
+          <p id={errorId} className="text-[12px] leading-[1.4] text-error">
+            {errors?.[0]}
+          </p>
+        ) : null}
+        <span className="ml-auto text-[12px] leading-[1.4] text-muted-soft">
+          {value.length}/{maxLength}
+        </span>
+      </div>
     </div>
   );
 }
@@ -98,9 +172,11 @@ export function PasswordField({
   errors,
   showRequiredMark,
   labelAside,
+  hint,
+  info,
   className,
   ...props
-}: Omit<FieldProps, "hint">) {
+}: FieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
   const hasError = Boolean(errors?.length);
@@ -110,7 +186,7 @@ export function PasswordField({
     <div className={className}>
       <div className="mb-[9px] flex items-center justify-between gap-3">
         <label htmlFor={id} className={LABEL}>
-          {label} {showRequiredMark ? <RequiredMark /> : null}
+          {label} {showRequiredMark ? <RequiredMark /> : null} <LabelInfo text={info} />
         </label>
         {labelAside}
       </div>
@@ -120,7 +196,7 @@ export function PasswordField({
           id={id}
           type={visible ? "text" : "password"}
           aria-invalid={hasError || undefined}
-          aria-describedby={hasError ? errorId : undefined}
+          aria-describedby={hasError ? errorId : hint ? `${id}-hint` : undefined}
           className={INPUT}
         />
         <button
@@ -134,6 +210,7 @@ export function PasswordField({
         </button>
       </div>
       <ErrorText id={errorId} errors={errors} />
+      {hasError ? null : <HintText id={`${id}-hint`} hint={hint} />}
     </div>
   );
 }
