@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { ChevronDownIcon, SearchIcon, type IconProps } from "@/components/ui/icons";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, type IconProps } from "@/components/ui/icons";
 
 /**
  * Server-rendered building blocks shared by the admin catalog lists (brands,
@@ -314,3 +314,78 @@ export function FilterTabs({
   );
 }
 
+/** Page numbers to show: always the first and last, the current one and its neighbours, gaps as "…". */
+function pageItems(page: number, pageCount: number): Array<number | "gap"> {
+  const shown = [...new Set([1, page - 1, page, page + 1, pageCount])]
+    .filter((n) => n >= 1 && n <= pageCount)
+    .sort((a, b) => a - b);
+  return shown.flatMap((n, i) => (i > 0 && n - shown[i - 1] > 1 ? ["gap" as const, n] : [n]));
+}
+
+const PAGE_BUTTON =
+  "inline-flex h-[34px] min-w-[34px] items-center justify-center rounded-[9px] px-[10px] text-[13px] font-semibold leading-none transition-colors duration-150";
+const PAGE_IDLE = `${PAGE_BUTTON} bg-field text-ink-soft hover:bg-iris-50 hover:text-iris-500`;
+
+/**
+ * The list designs' pager: "Showing 11–20 of 34" and numbered page links,
+ * right-aligned. Plain links carrying the current filters (`keep`), so every
+ * page is a shareable URL. Hidden when everything fits on one page.
+ */
+export function Pagination({
+  path,
+  page,
+  pageCount,
+  pageSize,
+  matching,
+  noun,
+  keep = {},
+}: {
+  path: string;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  /** Rows matching the current search/filters, across all pages. */
+  matching: number;
+  noun: string;
+  keep?: Record<string, string | undefined>;
+}) {
+  if (pageCount <= 1) return null;
+  const href = (n: number) => listHref(path, { ...keep, page: n > 1 ? String(n) : undefined });
+  const first = (page - 1) * pageSize + 1;
+  const last = Math.min(page * pageSize, matching);
+
+  return (
+    <nav aria-label={`${noun[0].toUpperCase()}${noun.slice(1)} pages`} className="mt-5 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-[12.5px] text-muted">
+        Showing {first}–{last} of {matching} {noun}
+      </p>
+      <div className="flex flex-wrap items-center gap-[6px]">
+        {page > 1 ? (
+          <Link href={href(page - 1)} aria-label="Previous page" className={PAGE_IDLE}>
+            <ChevronLeftIcon size={15} />
+          </Link>
+        ) : null}
+        {pageItems(page, pageCount).map((item, i) =>
+          item === "gap" ? (
+            <span key={`gap-${i}`} aria-hidden="true" className="px-1 text-[13px] text-muted-soft">
+              …
+            </span>
+          ) : item === page ? (
+            <span key={item} aria-current="page" className={`${PAGE_BUTTON} bg-iris-500 text-surface`}>
+              {item}
+            </span>
+          ) : (
+            <Link key={item} href={href(item)} aria-label={`Page ${item}`} className={PAGE_IDLE}>
+              {item}
+            </Link>
+          ),
+        )}
+        {page < pageCount ? (
+          <Link href={href(page + 1)} aria-label="Next page" className={PAGE_IDLE}>
+            <ChevronRightIcon size={15} />
+          </Link>
+        ) : null}
+      </div>
+    </nav>
+  );
+}

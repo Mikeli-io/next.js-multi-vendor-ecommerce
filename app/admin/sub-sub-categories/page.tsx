@@ -6,6 +6,7 @@ import {
   ListCard,
   ListHeading,
   NoMatches,
+  Pagination,
   ResultCount,
   ROW_CLASS,
   SearchToolbar,
@@ -30,8 +31,9 @@ export default async function SubSubCategoriesPage({ searchParams }: PageProps<"
     q: param(raw.q),
     category: param(raw.category) || undefined,
     subCategory: param(raw.subCategory) || undefined,
+    page: param(raw.page),
   });
-  const [{ total, subSubCategories }, options] = await Promise.all([getSubSubCategories(params), getCategoryOptions()]);
+  const [{ total, matching, page, pageCount, pageSize, subSubCategories }, options] = await Promise.all([getSubSubCategories(params), getCategoryOptions()]);
   const hasSubCategories = options.some((c) => c.subCategories.length > 0);
   const filtered = Boolean(params.q || params.category || params.subCategory);
 
@@ -94,7 +96,7 @@ export default async function SubSubCategoriesPage({ searchParams }: PageProps<"
                 </>
               }
             />
-            {filtered ? <ResultCount shown={subSubCategories.length} total={total} noun="sub sub categories" /> : null}
+            {filtered ? <ResultCount shown={matching} total={total} noun="sub sub categories" /> : null}
             {subSubCategories.length === 0 ? (
               <NoMatches clearHref="/admin/sub-sub-categories" noun="sub sub categories" />
             ) : (
@@ -132,6 +134,7 @@ export default async function SubSubCategoriesPage({ searchParams }: PageProps<"
                 ))}
               </TableFrame>
             )}
+            <Pagination path="/admin/sub-sub-categories" page={page} pageCount={pageCount} pageSize={pageSize} matching={matching} noun="sub sub categories" keep={{ q: params.q, category: params.category, subCategory: params.subCategory }} />
           </>
         )}
       </ListCard>

@@ -48,10 +48,15 @@ export const catalogIdSchema = z.cuid({ error: "This item no longer exists." });
 /** List filters read from the URL. Unknown or malformed values are dropped. */
 const q = z.string().trim().max(60).catch("");
 const optionalId = z.cuid().optional().catch(undefined);
+/** 1-based page from `?page=`; anything that isn't a positive integer is page 1. */
+const page = z.coerce.number().int().min(1).max(100000).catch(1);
 
-export const categoryListParamsSchema = z.object({ q });
-export const subCategoryListParamsSchema = z.object({ q, category: optionalId });
-export const subSubCategoryListParamsSchema = z.object({ q, category: optionalId, subCategory: optionalId });
+/** Rows per page on the Category Setup lists. */
+export const CATALOG_PAGE_SIZE = 10;
+
+export const categoryListParamsSchema = z.object({ q, page });
+export const subCategoryListParamsSchema = z.object({ q, category: optionalId, page });
+export const subSubCategoryListParamsSchema = z.object({ q, category: optionalId, subCategory: optionalId, page });
 
 export type CategoryListParams = z.infer<typeof categoryListParamsSchema>;
 export type SubCategoryListParams = z.infer<typeof subCategoryListParamsSchema>;

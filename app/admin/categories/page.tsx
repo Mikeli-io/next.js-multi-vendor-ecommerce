@@ -5,6 +5,7 @@ import {
   ListCard,
   ListHeading,
   NoMatches,
+  Pagination,
   ResultCount,
   ROW_CLASS,
   SearchToolbar,
@@ -26,8 +27,8 @@ export const metadata: Metadata = { title: "Categories · Covet admin" };
 export default async function CategoriesPage({ searchParams }: PageProps<"/admin/categories">) {
   const admin = await requireAdmin();
   const raw = await searchParams;
-  const params = categoryListParamsSchema.parse({ q: param(raw.q) });
-  const { total, categories } = await getCategories(params);
+  const params = categoryListParamsSchema.parse({ q: param(raw.q), page: param(raw.page) });
+  const { total, matching, page, pageCount, pageSize, categories } = await getCategories(params);
 
   return (
     <DashboardShell
@@ -48,7 +49,7 @@ export default async function CategoriesPage({ searchParams }: PageProps<"/admin
         ) : (
           <>
             <SearchToolbar action="/admin/categories" q={params.q} placeholder="Search by Category Name" />
-            {params.q ? <ResultCount shown={categories.length} total={total} noun="categories" /> : null}
+            {params.q ? <ResultCount shown={matching} total={total} noun="categories" /> : null}
             {categories.length === 0 ? (
               <NoMatches clearHref="/admin/categories" noun="categories" />
             ) : (
@@ -83,6 +84,7 @@ export default async function CategoriesPage({ searchParams }: PageProps<"/admin
                 ))}
               </TableFrame>
             )}
+            <Pagination path="/admin/categories" page={page} pageCount={pageCount} pageSize={pageSize} matching={matching} noun="categories" keep={{ q: params.q }} />
           </>
         )}
       </ListCard>

@@ -6,6 +6,7 @@ import {
   ListCard,
   ListHeading,
   NoMatches,
+  Pagination,
   ResultCount,
   ROW_CLASS,
   SearchToolbar,
@@ -26,8 +27,12 @@ export const metadata: Metadata = { title: "Sub Categories · Covet admin" };
 export default async function SubCategoriesPage({ searchParams }: PageProps<"/admin/sub-categories">) {
   const admin = await requireAdmin();
   const raw = await searchParams;
-  const params = subCategoryListParamsSchema.parse({ q: param(raw.q), category: param(raw.category) || undefined });
-  const [{ total, subCategories }, options] = await Promise.all([getSubCategories(params), getCategoryOptions()]);
+  const params = subCategoryListParamsSchema.parse({
+    q: param(raw.q),
+    category: param(raw.category) || undefined,
+    page: param(raw.page),
+  });
+  const [{ total, matching, page, pageCount, pageSize, subCategories }, options] = await Promise.all([getSubCategories(params), getCategoryOptions()]);
   const categories = options.map(({ id, name }) => ({ id, name }));
   const filtered = Boolean(params.q || params.category);
 
@@ -79,7 +84,7 @@ export default async function SubCategoriesPage({ searchParams }: PageProps<"/ad
                 />
               }
             />
-            {filtered ? <ResultCount shown={subCategories.length} total={total} noun="sub categories" /> : null}
+            {filtered ? <ResultCount shown={matching} total={total} noun="sub categories" /> : null}
             {subCategories.length === 0 ? (
               <NoMatches clearHref="/admin/sub-categories" noun="sub categories" />
             ) : (
@@ -116,6 +121,7 @@ export default async function SubCategoriesPage({ searchParams }: PageProps<"/ad
                 ))}
               </TableFrame>
             )}
+            <Pagination path="/admin/sub-categories" page={page} pageCount={pageCount} pageSize={pageSize} matching={matching} noun="sub categories" keep={{ q: params.q, category: params.category }} />
           </>
         )}
       </ListCard>

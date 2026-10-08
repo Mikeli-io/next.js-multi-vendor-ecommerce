@@ -4,10 +4,11 @@ import type { Prisma } from "@prisma/client";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { prisma } from "@/lib/prisma";
-import type {
-  CategoryListParams,
-  SubCategoryListParams,
-  SubSubCategoryListParams,
+import {
+  CATALOG_PAGE_SIZE,
+  type CategoryListParams,
+  type SubCategoryListParams,
+  type SubSubCategoryListParams,
 } from "@/lib/validation/catalog";
 
 /**
@@ -16,6 +17,20 @@ import type {
  *
  * Child and product counts are derived (`_count`, `groupBy`) — nothing is stored.
  */
+
+/**
+ * One page of a list. `total` counts every row (heading, empty state);
+ * `matching` counts rows passing the search/filters; the requested page is
+ * clamped to the last one that exists (e.g. after deleting its last row).
+ */
+export type PageInfo = { total: number; matching: number; page: number; pageCount: number; pageSize: number };
+
+function pageInfo(total: number, matching: number, requested: number): PageInfo {
+  const pageCount = Math.max(1, Math.ceil(matching / CATALOG_PAGE_SIZE));
+  return { total, matching, page: Math.min(requested, pageCount), pageCount, pageSize: CATALOG_PAGE_SIZE };
+}
+
+const pageWindow = (info: PageInfo) => ({ skip: (info.page - 1) * info.pageSize, take: info.pageSize });
 
 type TaxonomyField = "categoryId" | "subCategoryId" | "subSubCategoryId";
 
@@ -48,14 +63,14 @@ export async function getCategories(params: CategoryListParams) {
   await requireAdmin();
 
   const where: Prisma.CategoryWhereInput = params.q ? { name: { contains: params.q } } : {};
-  const [total, rows] = await Promise.all([
-    prisma.category.count(),
-    prisma.category.findMany({
-      where,
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, slug: true, image: true, _count: { select: { subCategories: true } } },
-    }),
-  ]);
+  const [total, matching] = await Promise.all([prisma.category.count(), prisma.category.count({ where })]);
+  const info = pageInfo(total, matching, params.page);
+  const rows = await prisma.category.findMany({
+    where,
+    ...pageWindow(info),
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, slug: true, image: true, _count: { select: { subCategories: true } } },
+  });
 
   const products = await productCounts("categoryId", rows.map((r) => r.id));
   const categories: CategoryRow[] = rows.map(({ _count, ...r }) => ({
@@ -63,7 +78,7 @@ export async function getCategories(params: CategoryListParams) {
     subCategoryCount: _count.subCategories,
     productCount: products.get(r.id) ?? null,
   }));
-  return { total, categories };
+  return { ...info, categories };
 }
 
 export type SubCategoryRow = {
@@ -81,19 +96,19 @@ export async function getSubCategories(params: SubCategoryListParams) {
     ...(params.q ? { name: { contains: params.q } } : {}),
     ...(params.category ? { categoryId: params.category } : {}),
   };
-  const [total, rows] = await Promise.all([
-    prisma.subCategory.count(),
-    prisma.subCategory.findMany({
-      where,
-      orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        category: { select: { id: true, name: true } },
-        _count: { select: { subSubCategories: true } },
-      },
-    }),
-  ]);
+  const [total, matching] = await Promise.all([prisma.subCategory.count(), prisma.subCategory.count({ where })]);
+  const info = pageInfo(total, matching, params.page);
+  const rows = await prisma.subCategory.findMany({
+    where,
+    ...pageWindow(info),
+    orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      category: { select: { id: true, name: true } },
+      _count: { select: { subSubCategories: true } },
+    },
+  });
 
   const products = await productCounts("subCategoryId", rows.map((r) => r.id));
   const subCategories: SubCategoryRow[] = rows.map(({ _count, ...r }) => ({
@@ -101,7 +116,7 @@ export async function getSubCategories(params: SubCategoryListParams) {
     subSubCategoryCount: _count.subSubCategories,
     productCount: products.get(r.id) ?? null,
   }));
-  return { total, subCategories };
+  return { ...info, subCategories };
 }
 
 export type SubSubCategoryRow = {
@@ -120,25 +135,25 @@ export async function getSubSubCategories(params: SubSubCategoryListParams) {
     // Category is derived through the sub category — there is no direct column.
     ...(params.category ? { subCategory: { categoryId: params.category } } : {}),
   };
-  const [total, rows] = await Promise.all([
-    prisma.subSubCategory.count(),
-    prisma.subSubCategory.findMany({
-      where,
-      orderBy: [{ subCategory: { category: { name: "asc" } } }, { subCategory: { name: "asc" } }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        subCategory: { select: { id: true, name: true, category: { select: { id: true, name: true } } } },
-      },
-    }),
-  ]);
+  const [total, matching] = await Promise.all([prisma.subSubCategory.count(), prisma.subSubCategory.count({ where })]);
+  const info = pageInfo(total, matching, params.page);
+  const rows = await prisma.subSubCategory.findMany({
+    where,
+    ...pageWindow(info),
+    orderBy: [{ subCategory: { category: { name: "asc" } } }, { subCategory: { name: "asc" } }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      subCategory: { select: { id: true, name: true, category: { select: { id: true, name: true } } } },
+    },
+  });
 
   const products = await productCounts("subSubCategoryId", rows.map((r) => r.id));
   const subSubCategories: SubSubCategoryRow[] = rows.map((r) => ({
     ...r,
     productCount: products.get(r.id) ?? null,
   }));
-  return { total, subSubCategories };
+  return { ...info, subSubCategories };
 }
 
 export type CategoryOption = {
