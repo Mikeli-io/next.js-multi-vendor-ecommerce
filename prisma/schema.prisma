@@ -1,0 +1,265 @@
+// Covet — accounts & auth, vendors, catalog taxonomy and brands, and vendor
+// products. Orders, cart and payments are not modelled yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// A user has exactly one role. Guests are unauthenticated and are not a role.
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+/// Approval state of a *store*, kept separate from the user's account identity.
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+/// The single identity/authentication record for every role.
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  /// The person's contact number in E.164 form (e.g. +15550102030), normalized
+  /// on the server. Optional: accounts created before it was collected have
+  /// none, and customers may leave it blank. Vendor registration requires it.
+  /// A store's contact number is its owner's — there is no Vendor.phone.
+  phone        String?  @db.VarChar(16)
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  /// Present only when `role` is VENDOR.
+  vendor Vendor?
+
+  @@map("users")
+}
+
+/// The store behind a `role = VENDOR` user. Holds store identity and approval
+/// state only — earnings, catalog and payouts belong to later phases.
+model Vendor {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  storeName String
+  slug      String       @unique
+  status    VendorStatus @default(PENDING)
+
+  // Store profile and business TIN. All optional: self-registration collects
+  // none of them; Add New Vendor (admin) collects them. Image fields hold a
+  // public URL path, e.g. /uploads/vendors/<uuid>.png.
+  /// The owner's photo ("Vendor Image" in the Add New Vendor design).
+  image          String?
+  logo           String?
+  coverImage     String?
+  address        String?   @db.VarChar(100)
+  tinNumber      String?   @db.VarChar(30)
+  /// Date only — the time part is always midnight UTC.
+  tinExpireDate  DateTime? @db.Date
+  /// A *private* storage key (e.g. vendor-documents/<uuid>.pdf), never a public
+  /// URL: tax documents are served only through the admin-guarded route
+  /// app/admin/vendors/[id]/tin-certificate.
+  tinCertificate String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  products Product[]
+
+  @@map("vendors")
+}
+
+enum BrandStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// A product brand, managed by admins.
+///
+/// There is no Product model yet, so there is no Product → Brand relation and
+/// deliberately no stored product count: when Product is added, give it a
+/// `brandId` (onDelete: Restrict, so deleting a used brand fails loudly) and
+/// derive counts from that relation.
+model Brand {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  /// Derived from `name` on the server; never user input.
+  slug      String      @unique
+  /// Public URL path of the uploaded logo, e.g. /uploads/brands/<uuid>.png
+  image     String?
+  status    BrandStatus @default(ACTIVE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  products Product[]
+
+  @@index([status])
+  @@map("brands")
+}
+
+/// Top level of the catalog taxonomy: Category → SubCategory → SubSubCategory.
+///
+/// No Product model exists yet, so there are no product relations or stored
+/// product counts; when Product is added, relate it to the deepest level it
+/// is classified under and derive counts from that relation.
+model Category {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  /// Derived from `name` on the server; never user input.
+  slug          String        @unique
+  /// Public URL path of the uploaded image, e.g. /uploads/categories/<uuid>.png
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  subCategories SubCategory[]
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model SubCategory {
+  id               String           @id @default(cuid())
+  name             String
+  categoryId       String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  /// Restrict: a category with sub categories cannot be deleted.
+  category         Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subSubCategories SubSubCategory[]
+
+  /// Names are unique within a category ("Accessories" may exist under several).
+  products Product[]
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+  @@map("sub_categories")
+}
+
+/// Its category is derived through `subCategory` — deliberately no categoryId
+/// here, so the two can never disagree.
+model SubSubCategory {
+  id            String      @id @default(cuid())
+  name          String
+  subCategoryId String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  /// Restrict: a sub category with sub sub categories cannot be deleted.
+  subCategory   SubCategory @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
+
+  products Product[]
+
+  @@unique([subCategoryId, name])
+  @@index([subCategoryId])
+  @@map("sub_sub_categories")
+}
+
+// ---- Products -------------------------------------------------------------------
+
+/// Whether `Product.discount` is a flat amount or a percentage of the price.
+enum ProductDiscountType {
+  AMOUNT
+  PERCENTAGE
+}
+
+/// Admin moderation of a product. Separate from `isActive` (the vendor's own
+/// on/off switch): vendors can never set this; new products start PENDING.
+enum ProductApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Product {
+  id       String @id @default(cuid())
+  /// Always the signed-in vendor's store, set on the server — never form input.
+  vendorId String
+
+  // Taxonomy — category required; sub/sub-sub + brand optional. onDelete is
+  // chosen so deleting a brand/category NEVER cascade-deletes products.
+  brandId          String?
+  categoryId       String
+  subCategoryId    String?
+  subSubCategoryId String?
+
+  name             String
+  /// Derived from `name` on the server; never user input.
+  slug             String  @unique
+  sku              String?
+  shortDescription String? @db.Text
+  description      String  @db.Text
+
+  // Pricing (all Decimal). discountType says whether `discount` is a flat amount or %.
+  price          Decimal             @db.Decimal(10, 2)
+  compareAtPrice Decimal?            @db.Decimal(10, 2)
+  discount       Decimal?            @db.Decimal(10, 2)
+  discountType   ProductDiscountType @default(AMOUNT)
+  /// A percentage, 0–100.
+  taxRate        Decimal?            @db.Decimal(5, 2)
+
+  /// Simple-product stock. IGNORED when the product has variations — then the
+  /// sum of ProductVariation.stock is the source of truth (lib/products/stock.ts).
+  stock Int @default(0)
+
+  /// Public URL path, e.g. /uploads/products/<uuid>.webp
+  thumbnail String?
+  /// string[] of public image paths (/uploads/products/...), in display order.
+  gallery   Json?
+
+  metaTitle       String?
+  metaDescription String? @db.Text
+
+  approvalStatus ProductApprovalStatus @default(PENDING)
+  /// The vendor's own on/off switch. Independent of `approvalStatus`.
+  isActive       Boolean               @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor         Vendor             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  brand          Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  category       Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subCategory    SubCategory?       @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
+  subSubCategory SubSubCategory?    @relation(fields: [subSubCategoryId], references: [id], onDelete: Restrict)
+  variations     ProductVariation[]
+
+  @@index([vendorId])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([approvalStatus])
+  @@map("products")
+}
+
+/// One row per attribute combination (e.g. "Red / M"), each with its own price + stock.
+model ProductVariation {
+  id         String   @id @default(cuid())
+  productId  String
+  /// Human label built on the server from the attribute values, e.g. "Red / M".
+  name       String
+  sku        String?
+  price      Decimal  @db.Decimal(10, 2)
+  stock      Int      @default(0)
+  /// Public URL path under /uploads/products/, owned by this variation.
+  image      String?
+  /// { "Color": "Red", "Size": "M" } — one value per attribute group.
+  attributes Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_variations")
+}
