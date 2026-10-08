@@ -139,8 +139,8 @@ const DEFAULT_CRUMBS: Crumb[] = [{ label: "Home", href: "/" }, { label: "Dashboa
 
 const PROFILE_MENU: Record<Role, Array<NavLink & { icon: ComponentType<IconProps> }>> = {
   vendor: [
-    { label: "Profile Setting", icon: UserIcon },
-    { label: "Change Password", icon: LockIcon },
+    { label: "Profile Setting", icon: UserIcon, href: "/vendor/profile" },
+    { label: "Change Password", icon: LockIcon, href: "/vendor/profile/password" },
   ],
   admin: [
     { label: "Profile", icon: UserIcon },
@@ -592,6 +592,8 @@ function ProfileMenu({ role, user }: { role: Role; user?: ShellUser | null }) {
         <div className="absolute right-0 top-full z-[60] w-[236px] pt-[10px]">
           <div
             role="menu"
+            // Following a menu link closes the menu.
+            onClick={(e) => (e.target as HTMLElement).closest("a") && setOpen(false)}
             className="rounded-lg border border-line-soft bg-surface p-[6px] shadow-menu"
           >
             {role === "vendor" ? (
@@ -610,10 +612,13 @@ function ProfileMenu({ role, user }: { role: Role; user?: ShellUser | null }) {
               </div>
             ) : null}
 
-            {PROFILE_MENU[role].map(({ label, icon: Icon }) => (
+            {PROFILE_MENU[role].map(({ label, icon: Icon, href }) => (
               <NavTarget
                 key={label}
-                className="flex items-center gap-[11px] rounded-[10px] px-[14px] py-[10px] text-[13.5px] font-medium leading-none text-ink-soft"
+                href={href}
+                className={`flex items-center gap-[11px] rounded-[10px] px-[14px] py-[10px] text-[13.5px] font-medium leading-none text-ink-soft ${
+                  href ? "transition-colors duration-150 hover:bg-iris-50 hover:text-iris-500" : ""
+                }`}
               >
                 <Icon size={17} strokeWidth={1.9} />
                 {label}
