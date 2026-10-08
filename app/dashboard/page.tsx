@@ -4,6 +4,7 @@ import { AccountHeading, AccountShell } from "@/components/account/account-shell
 import { ProfileForm } from "@/components/account/profile-form";
 import { UserIcon } from "@/components/ui/icons";
 import { requireRole } from "@/lib/auth/guards";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "My Dashboard · Covet" };
 
@@ -14,6 +15,8 @@ export const metadata: Metadata = { title: "My Dashboard · Covet" };
  */
 export default async function CustomerDashboardPage() {
   const user = await requireRole("CUSTOMER");
+  // Phone is not part of the guard's CurrentUser; only this form needs it.
+  const contact = await prisma.user.findUnique({ where: { id: user.id }, select: { phone: true } });
   const [first = "", ...rest] = user.name.trim().split(/\s+/);
 
   return (
@@ -30,7 +33,7 @@ export default async function CustomerDashboardPage() {
         </p>
       </div>
 
-      <ProfileForm firstName={first} lastName={rest.join(" ")} email={user.email} />
+      <ProfileForm firstName={first} lastName={rest.join(" ")} email={user.email} phone={contact?.phone ?? null} />
     </AccountShell>
   );
 }

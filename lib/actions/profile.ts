@@ -9,7 +9,7 @@ import { profileSchema } from "@/lib/validation/auth";
 import type { ProfileFormState } from "./profile-state";
 
 /**
- * Update the signed-in customer's display name.
+ * Update the signed-in customer's display name and phone number.
  *
  * Authorization is checked here, not just on the page: a Server Action is a
  * public endpoint that can be called without ever loading `/dashboard`. The
@@ -24,6 +24,7 @@ export async function updateProfile(
   const values = {
     firstName: String(formData.get("firstName") ?? ""),
     lastName: String(formData.get("lastName") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
   };
 
   const parsed = profileSchema.safeParse(values);
@@ -33,12 +34,13 @@ export async function updateProfile(
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { name: parsed.data.name },
+    data: { name: parsed.data.name, phone: parsed.data.phone },
     select: { id: true },
   });
 
   // The header greeting and sidebar read the name too.
   revalidatePath("/dashboard");
 
-  return { success: "Your profile has been updated.", values };
+  // Echo the number as stored (normalized), so the field shows what was saved.
+  return { success: "Your profile has been updated.", values: { ...values, phone: parsed.data.phone ?? "" } };
 }

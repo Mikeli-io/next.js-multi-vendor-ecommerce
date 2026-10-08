@@ -7,14 +7,17 @@ import { FormAlert } from "@/components/ui/form-alert";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { registerVendor } from "@/lib/actions/register";
 import { EMPTY_FORM_STATE } from "@/lib/actions/auth-state";
+import { PHONE_PLACEHOLDER } from "@/lib/validation/phone";
 
 /**
  * The two-column card from `designs/.../VendorRegister.dc.html`.
  *
- * Field set differs from the mockup in two places, both forced by the Phase 1
- * data model: `Store Name` and `Your Name` are added because a Vendor row
- * needs a store name and a User row needs a name, and `Phone` is dropped
- * because nothing in the schema stores it.
+ * Field set differs from the mockup in one place, forced by the data model:
+ * `Store Name` and `Your Name` are added because a Vendor row needs a store
+ * name and a User row needs a name. They share a row so the design's
+ * Email | Phone and Password | Confirm rows stay intact. Phone is the owner's
+ * (stored on User) and takes the full international number instead of the
+ * mockup's fixed "+1" chip — see lib/validation/phone.ts.
  */
 export function VendorRegisterForm() {
   const [state, formAction] = useActionState(registerVendor, EMPTY_FORM_STATE);
@@ -35,7 +38,6 @@ export function VendorRegisterForm() {
           defaultValue={state.values?.storeName}
           errors={state.fieldErrors?.storeName}
           showRequiredMark
-          className="sm:col-span-2"
           required
         />
 
@@ -58,6 +60,19 @@ export function VendorRegisterForm() {
           placeholder="Ex: example@gmail.com"
           defaultValue={state.values?.email}
           errors={state.fieldErrors?.email}
+          showRequiredMark
+          required
+        />
+
+        <Field
+          label="Phone"
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder={PHONE_PLACEHOLDER}
+          defaultValue={state.values?.phone}
+          errors={state.fieldErrors?.phone}
           showRequiredMark
           required
         />

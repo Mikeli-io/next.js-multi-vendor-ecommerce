@@ -105,12 +105,14 @@ export async function registerVendor(
 ): Promise<AuthFormState> {
   const rawName = String(formData.get("name") ?? "");
   const rawEmail = String(formData.get("email") ?? "");
+  const rawPhone = String(formData.get("phone") ?? "");
   const rawStoreName = String(formData.get("storeName") ?? "");
-  const values = { name: rawName, email: rawEmail, storeName: rawStoreName };
+  const values = { name: rawName, email: rawEmail, phone: rawPhone, storeName: rawStoreName };
 
   const parsed = vendorRegisterSchema.safeParse({
     name: rawName,
     email: rawEmail,
+    phone: rawPhone,
     storeName: rawStoreName,
     password: String(formData.get("password") ?? ""),
     confirmPassword: String(formData.get("confirmPassword") ?? ""),
@@ -120,7 +122,7 @@ export async function registerVendor(
     return { fieldErrors: toFieldErrors(parsed.error), values };
   }
 
-  const { name, email, storeName, password } = parsed.data;
+  const { name, email, phone, storeName, password } = parsed.data;
 
   const existing = await prisma.user.findUnique({
     where: { email },
@@ -148,6 +150,7 @@ export async function registerVendor(
       data: {
         name,
         email,
+        phone,
         passwordHash,
         role: "VENDOR",
         vendor: {
