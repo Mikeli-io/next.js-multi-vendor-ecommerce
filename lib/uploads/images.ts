@@ -19,7 +19,7 @@ import { IMAGE_MAX_BYTES } from "@/lib/validation/image";
  */
 
 /** Every folder images may be stored in. A fixed list, never caller input. */
-export type ImageFolder = "brands" | "categories" | "vendors";
+export type ImageFolder = "brands" | "categories" | "vendors" | "products";
 
 const publicPrefix = (folder: ImageFolder) => `/uploads/${folder}/`;
 const uploadDir = (folder: ImageFolder) =>

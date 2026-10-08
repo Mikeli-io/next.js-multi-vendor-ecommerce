@@ -36,7 +36,7 @@ export default async function BrandDetailsPage({ params }: PageProps<"/admin/bra
     ["Created", formatDate(brand.createdAt)],
     [
       "Products",
-      brand.productCount ?? <span key="p" className="text-muted-soft">— not in catalog yet</span>,
+      brand.productCount,
     ],
   ];
 
@@ -92,13 +92,16 @@ export default async function BrandDetailsPage({ params }: PageProps<"/admin/bra
       </section>
 
       <SectionCard title="Products" icon={BoxIcon}>
-        {/* No Product model exists yet, so there is nothing to list. Once the
-            Product → Brand relation exists, list this brand's products here
-            with the shared product-list pattern. */}
+        {/* An admin product list (moderation) is not built yet; until then
+            this shows how many products use the brand. */}
         <EmptyState
           icon={BoxIcon}
-          title="No products yet"
-          body="Products assigned to this brand will be listed here once the product catalog is built."
+          title={brand.productCount ? `${brand.productCount} product${brand.productCount === 1 ? "" : "s"} use this brand` : "No products yet"}
+          body={
+            brand.productCount
+              ? "Vendors' products using this brand will be listed here once admin product management is built."
+              : "No vendor has assigned a product to this brand yet."
+          }
         />
       </SectionCard>
     </DashboardShell>

@@ -23,9 +23,9 @@ import type { FormActionResult } from "./form-result";
  *  2. validates with the same Zod schema its form uses;
  *  3. maps database failures to safe messages (raw errors are only logged).
  *
- * Deletes never cascade: a parent with children is refused with an
- * explanation, and the schema's `onDelete: Restrict` blocks it at the database
- * level too, should anything slip past the check.
+ * Deletes never cascade: a parent with children — or any item that products
+ * use — is refused with an explanation, and the schema's `onDelete: Restrict`
+ * blocks it at the database level too, should anything slip past the check.
  */
 
 const UNEXPECTED = "Something went wrong. Please try again.";
@@ -39,6 +39,11 @@ function revalidateTaxonomy() {
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+const inUse = (name: string, products: number): FormActionResult => ({
+  ok: false,
+  formError: `"${name}" is used by ${plural(products, "product", "products")}, so it can't be deleted. Move those products first.`,
+});
 
 // ---- Categories ---------------------------------------------------------------
 
@@ -137,9 +142,10 @@ export async function deleteCategory(id: string): Promise<FormActionResult> {
   if (!catalogIdSchema.safeParse(id).success) return { ok: false, formError: GONE };
   const category = await prisma.category.findUnique({
     where: { id },
-    select: { name: true, image: true, _count: { select: { subCategories: true } } },
+    select: { name: true, image: true, _count: { select: { subCategories: true, products: true } } },
   });
   if (!category) return { ok: false, formError: GONE };
+  if (category._count.products > 0) return inUse(category.name, category._count.products);
 
   const children = category._count.subCategories;
   if (children > 0) {
@@ -153,7 +159,7 @@ export async function deleteCategory(id: string): Promise<FormActionResult> {
     await prisma.category.delete({ where: { id } });
   } catch (error) {
     if (isForeignKeyViolation(error)) {
-      return { ok: false, formError: `"${category.name}" still has sub categories, so it can't be deleted.` };
+      return { ok: false, formError: `"${category.name}" still has sub categories or products, so it can't be deleted.` };
     }
     console.error("deleteCategory failed", error);
     return { ok: false, formError: UNEXPECTED };
@@ -233,8 +239,13 @@ export async function updateSubCategory(id: string, formData: FormData): Promise
 
   try {
     // Moving it to another category moves its sub sub categories with it:
-    // their category is derived through this row.
-    await prisma.subCategory.update({ where: { id }, data: { categoryId, name }, select: { id: true } });
+    // their category is derived through this row. Products store the whole
+    // path (category, sub, sub sub), so theirs moves too, in the same
+    // transaction — a product never points at a sub category of another category.
+    await prisma.$transaction([
+      prisma.subCategory.update({ where: { id }, data: { categoryId, name }, select: { id: true } }),
+      prisma.product.updateMany({ where: { subCategoryId: id }, data: { categoryId } }),
+    ]);
   } catch (error) {
     if (isUniqueViolation(error)) return { ok: false, fieldErrors: { name: ["This category already has a sub category with this name."] } };
     if (isForeignKeyViolation(error)) return { ok: false, fieldErrors: { categoryId: ["This category no longer exists. Choose another."] } };
@@ -252,9 +263,10 @@ export async function deleteSubCategory(id: string): Promise<FormActionResult> {
   if (!catalogIdSchema.safeParse(id).success) return { ok: false, formError: GONE };
   const sub = await prisma.subCategory.findUnique({
     where: { id },
-    select: { name: true, _count: { select: { subSubCategories: true } } },
+    select: { name: true, _count: { select: { subSubCategories: true, products: true } } },
   });
   if (!sub) return { ok: false, formError: GONE };
+  if (sub._count.products > 0) return inUse(sub.name, sub._count.products);
 
   const children = sub._count.subSubCategories;
   if (children > 0) {
@@ -268,7 +280,7 @@ export async function deleteSubCategory(id: string): Promise<FormActionResult> {
     await prisma.subCategory.delete({ where: { id } });
   } catch (error) {
     if (isForeignKeyViolation(error)) {
-      return { ok: false, formError: `"${sub.name}" still has sub sub categories, so it can't be deleted.` };
+      return { ok: false, formError: `"${sub.name}" still has sub sub categories or products, so it can't be deleted.` };
     }
     console.error("deleteSubCategory failed", error);
     return { ok: false, formError: UNEXPECTED };
@@ -359,7 +371,12 @@ export async function updateSubSubCategory(id: string, formData: FormData): Prom
   if (problem) return problem;
 
   try {
-    await prisma.subSubCategory.update({ where: { id }, data: { subCategoryId, name }, select: { id: true } });
+    // Products store the whole path; moving this row moves theirs with it.
+    // `checkSubSubCategory` confirmed the sub category belongs to `categoryId`.
+    await prisma.$transaction([
+      prisma.subSubCategory.update({ where: { id }, data: { subCategoryId, name }, select: { id: true } }),
+      prisma.product.updateMany({ where: { subSubCategoryId: id }, data: { subCategoryId, categoryId } }),
+    ]);
   } catch (error) {
     if (isUniqueViolation(error)) return { ok: false, fieldErrors: { name: ["This sub category already has a sub sub category with this name."] } };
     if (isForeignKeyViolation(error)) return { ok: false, fieldErrors: { subCategoryId: ["This sub category no longer exists. Choose another."] } };
@@ -375,12 +392,17 @@ export async function deleteSubSubCategory(id: string): Promise<FormActionResult
   await requireAdmin();
 
   if (!catalogIdSchema.safeParse(id).success) return { ok: false, formError: GONE };
-  const item = await prisma.subSubCategory.findUnique({ where: { id }, select: { name: true } });
+  const item = await prisma.subSubCategory.findUnique({
+    where: { id },
+    select: { name: true, _count: { select: { products: true } } },
+  });
   if (!item) return { ok: false, formError: GONE };
+  if (item._count.products > 0) return inUse(item.name, item._count.products);
 
   try {
     await prisma.subSubCategory.delete({ where: { id } });
   } catch (error) {
+    if (isForeignKeyViolation(error)) return { ok: false, formError: `"${item.name}" is used by products, so it can't be deleted.` };
     console.error("deleteSubSubCategory failed", error);
     return { ok: false, formError: UNEXPECTED };
   }

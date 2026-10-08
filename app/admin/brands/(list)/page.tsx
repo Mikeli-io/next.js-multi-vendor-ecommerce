@@ -16,7 +16,6 @@ import {
   ListCard,
   ListHeading,
   NoMatches,
-  NotAvailable,
   ResultCount,
   ROW_CLASS,
   SearchToolbar,
@@ -104,7 +103,7 @@ export default async function BrandsPage({ searchParams }: PageProps<"/admin/bra
                       {brand.slug}
                     </span>
                     <span role="cell" className="font-display text-[13.5px] font-bold text-ink">
-                      {brand.productCount ?? <NotAvailable title="Products aren't in the catalog yet" />}
+                      {brand.productCount}
                     </span>
                     <span role="cell">
                       <BrandStatusToggle id={brand.id} name={brand.name} status={brand.status} />

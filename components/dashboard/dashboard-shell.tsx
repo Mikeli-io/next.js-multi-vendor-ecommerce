@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 
 import {
   BellIcon,
+  BoxIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -90,6 +91,19 @@ const SIDEBAR: Record<Role, SidebarConfig> = {
         items: [
           { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.vendor },
           { label: "POS", icon: MonitorIcon },
+        ],
+      },
+      {
+        title: "Product Management",
+        items: [
+          {
+            label: "Products",
+            icon: BoxIcon,
+            children: [
+              { label: "Product List", href: "/vendor/products" },
+              { label: "Add New Product", href: "/vendor/products/new" },
+            ],
+          },
         ],
       },
     ],

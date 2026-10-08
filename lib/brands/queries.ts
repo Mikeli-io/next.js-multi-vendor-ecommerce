@@ -14,23 +14,20 @@ export type BrandRow = {
   image: string | null;
   status: BrandStatusValue;
   createdAt: Date;
-  /** `null` until a Product model exists — see `getBrandProductCounts`. */
-  productCount: number | null;
+  productCount: number;
 };
 
-/**
- * Products per brand, derived from the Product → Brand relation.
- *
- * There is no Product model yet, so there is nothing to count and this returns
- * `null` for every brand ("not applicable"), which the UI renders as such —
- * never as a stored or invented number. This is the single place to replace
- * with a `prisma.product.groupBy({ by: ["brandId"], _count: true })` once the
- * relation exists; the list, details page and delete guard all read from it.
- */
-async function getBrandProductCounts(
-  brandIds: string[],
-): Promise<Map<string, number | null>> {
-  return new Map(brandIds.map((id) => [id, null]));
+/** Products per brand, derived from the Product → Brand relation. */
+async function getBrandProductCounts(brandIds: string[]): Promise<Map<string, number>> {
+  if (!brandIds.length) return new Map();
+  const groups = await prisma.product.groupBy({
+    by: ["brandId"],
+    where: { brandId: { in: brandIds } },
+    _count: { _all: true },
+  });
+  const counts = new Map<string, number>(brandIds.map((id) => [id, 0]));
+  for (const group of groups) if (group.brandId) counts.set(group.brandId, group._count._all);
+  return counts;
 }
 
 const SELECT = {
@@ -63,7 +60,7 @@ export async function getBrands(params: BrandListParams) {
   const counts = await getBrandProductCounts(rows.map((r) => r.id));
   const brands: BrandRow[] = rows.map((r) => ({
     ...r,
-    productCount: counts.get(r.id) ?? null,
+    productCount: counts.get(r.id) ?? 0,
   }));
 
   return { total, brands };
@@ -80,13 +77,10 @@ export const getBrand = cache(async (id: string): Promise<BrandRow | null> => {
   if (!row) return null;
 
   const counts = await getBrandProductCounts([row.id]);
-  return { ...row, productCount: counts.get(row.id) ?? null };
+  return { ...row, productCount: counts.get(row.id) ?? 0 };
 });
 
-/**
- * How many products use a brand, for the delete guard. `null` means products
- * are not modelled yet, so nothing can reference the brand.
- */
-export async function countBrandProducts(id: string): Promise<number | null> {
-  return (await getBrandProductCounts([id])).get(id) ?? null;
+/** How many products use a brand, for the delete guard. */
+export async function countBrandProducts(id: string): Promise<number> {
+  return (await getBrandProductCounts([id])).get(id) ?? 0;
 }

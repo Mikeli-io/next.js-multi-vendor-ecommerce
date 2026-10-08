@@ -5,7 +5,6 @@ import {
   ListCard,
   ListHeading,
   NoMatches,
-  NotAvailable,
   ResultCount,
   ROW_CLASS,
   SearchToolbar,
@@ -75,7 +74,7 @@ export default async function CategoriesPage({ searchParams }: PageProps<"/admin
                       </Link>
                     </span>
                     <span role="cell" className="font-display text-[13.5px] font-bold text-ink">
-                      {c.productCount ?? <NotAvailable title="Products aren't in the catalog yet" />}
+                      {c.productCount}
                     </span>
                     <span role="cell">
                       <CategoryRowActions category={{ id: c.id, name: c.name, image: c.image }} />

@@ -14,13 +14,25 @@ import type {
  * Admin loaders for the category taxonomy. Each one checks the ADMIN role
  * itself, beside its queries; search and filters run in the database.
  *
- * Child counts are derived with `_count` — nothing is stored. Product counts
- * are `null` ("not applicable") because no Product model exists yet; replace
- * `productCounts` with a real `groupBy` once products reference the taxonomy.
+ * Child and product counts are derived (`_count`, `groupBy`) — nothing is stored.
  */
 
-function productCounts(ids: string[]): Map<string, number | null> {
-  return new Map(ids.map((id) => [id, null]));
+type TaxonomyField = "categoryId" | "subCategoryId" | "subSubCategoryId";
+
+/** Products per taxonomy row, by the product column that references it. */
+async function productCounts(field: TaxonomyField, ids: string[]): Promise<Map<string, number>> {
+  if (!ids.length) return new Map();
+  const groups = await prisma.product.groupBy({
+    by: [field],
+    where: { [field]: { in: ids } },
+    _count: { _all: true },
+  });
+  const counts = new Map<string, number>(ids.map((id) => [id, 0]));
+  for (const group of groups) {
+    const id = group[field];
+    if (id) counts.set(id, group._count._all);
+  }
+  return counts;
 }
 
 export type CategoryRow = {
@@ -45,7 +57,7 @@ export async function getCategories(params: CategoryListParams) {
     }),
   ]);
 
-  const products = productCounts(rows.map((r) => r.id));
+  const products = await productCounts("categoryId", rows.map((r) => r.id));
   const categories: CategoryRow[] = rows.map(({ _count, ...r }) => ({
     ...r,
     subCategoryCount: _count.subCategories,
@@ -83,7 +95,7 @@ export async function getSubCategories(params: SubCategoryListParams) {
     }),
   ]);
 
-  const products = productCounts(rows.map((r) => r.id));
+  const products = await productCounts("subCategoryId", rows.map((r) => r.id));
   const subCategories: SubCategoryRow[] = rows.map(({ _count, ...r }) => ({
     ...r,
     subSubCategoryCount: _count.subSubCategories,
@@ -121,7 +133,7 @@ export async function getSubSubCategories(params: SubSubCategoryListParams) {
     }),
   ]);
 
-  const products = productCounts(rows.map((r) => r.id));
+  const products = await productCounts("subSubCategoryId", rows.map((r) => r.id));
   const subSubCategories: SubSubCategoryRow[] = rows.map((r) => ({
     ...r,
     productCount: products.get(r.id) ?? null,
