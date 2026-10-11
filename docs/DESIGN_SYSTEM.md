@@ -205,9 +205,12 @@ line is non-negotiable — it's what makes this a marketplace.
   bridge** (no margin gap) so the pointer can travel into the panel without it closing.
 - **Customer dashboard** — storefront header/footer + left account sidebar (icon rows,
   active = iris-50 bg + iris text) + white content card.
-- **Seller / Admin dashboard** — dark 64px **icon rail** + 236px white **sidebar**
-  (grouped nav, uppercase group labels) + 64px topbar (sidebar toggle, breadcrumb, search,
-  notifications, profile dropdown-on-hover with padding bridge) + content on `--bg-dash`.
+- **Seller / Admin dashboard** — a single 236px dark (`--ink`) **sidebar** + 64px topbar
+  (sidebar toggle, breadcrumb, search, notifications, profile dropdown-on-hover with padding
+  bridge) + content on `--bg-dash`. The sidebar is one continuous list: top-level items name
+  the main sections and related pages sit in collapsible dropdowns. **No non-clickable section
+  heading labels** (e.g. "OVERVIEW", "CATALOG") in any dashboard sidebar unless explicitly
+  requested. In the vendor sidebar, POS is the last top-level item.
 
 ---
 

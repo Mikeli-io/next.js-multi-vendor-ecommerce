@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   Fragment,
   useEffect,
+  useId,
   useRef,
   useState,
   type ComponentType,
@@ -63,12 +64,15 @@ type NavLink = {
 /** A sidebar item; `children` makes it an expandable group (one level deep). */
 type NavItem = NavLink & { children?: NavLink[] };
 
-type NavGroup = { title: string; items: NavItem[] };
 
 type SidebarConfig = {
   title: string;
   icon: ComponentType<IconProps>;
-  groups: NavGroup[];
+  /**
+   * One continuous list: top-level items name the main sections and related
+   * pages sit in collapsible dropdowns. No non-clickable section headings.
+   */
+  items: NavItem[];
 };
 
 export type Crumb = { label: string; href?: string };
@@ -79,84 +83,58 @@ const DASHBOARD_HREF: Record<Role, string> = {
 };
 
 /**
- * Each role's navigation. The vendor keeps its existing Overview items; items
- * without an `href` (POS) have no page yet and render inert.
+ * Each role's navigation: one continuous list, no section headings (see
+ * CLAUDE.md "Dashboard navigation"). Items without an `href` (POS) have no
+ * page yet and render inert.
  */
 const SIDEBAR: Record<Role, SidebarConfig> = {
   vendor: {
     title: "Home",
     icon: HomeIcon,
-    groups: [
+    items: [
+      { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.vendor },
       {
-        title: "Overview",
-        items: [
-          { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.vendor },
-          { label: "POS", icon: MonitorIcon },
+        label: "Products",
+        icon: BoxIcon,
+        children: [
+          { label: "Product List", href: "/vendor/products" },
+          { label: "Add New Product", href: "/vendor/products/new" },
         ],
       },
       {
-        title: "Product Management",
-        items: [
-          {
-            label: "Products",
-            icon: BoxIcon,
-            children: [
-              { label: "Product List", href: "/vendor/products" },
-              { label: "Add New Product", href: "/vendor/products/new" },
-            ],
-          },
+        label: "Coupon Manage",
+        icon: TicketIcon,
+        children: [
+          { label: "Create Coupon", href: "/vendor/coupons/new" },
+          { label: "Coupon List", href: "/vendor/coupons" },
         ],
       },
-      {
-        title: "Promotion Management",
-        items: [
-          {
-            label: "Coupon Manage",
-            icon: TicketIcon,
-            children: [
-              { label: "Create Coupon", href: "/vendor/coupons/new" },
-              { label: "Coupon List", href: "/vendor/coupons" },
-            ],
-          },
-        ],
-      },
+      // POS is always the vendor sidebar's last item.
+      { label: "POS", icon: MonitorIcon },
     ],
   },
   admin: {
     title: "Home",
     icon: HomeIcon,
-    groups: [
+    items: [
+      { label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.admin },
+      { label: "Brands", icon: TagIcon, href: "/admin/brands" },
       {
-        title: "Overview",
-        items: [{ label: "Dashboard", icon: DashboardIcon, href: DASHBOARD_HREF.admin }],
-      },
-      {
-        title: "Catalog",
-        items: [
-          { label: "Brands", icon: TagIcon, href: "/admin/brands" },
-          {
-            label: "Category Setup",
-            icon: GridIcon,
-            children: [
-              { label: "Categories", href: "/admin/categories" },
-              { label: "Sub Categories", href: "/admin/sub-categories" },
-              { label: "Sub Sub Categories", href: "/admin/sub-sub-categories" },
-            ],
-          },
+        label: "Category Setup",
+        icon: GridIcon,
+        children: [
+          { label: "Categories", href: "/admin/categories" },
+          { label: "Sub Categories", href: "/admin/sub-categories" },
+          { label: "Sub Sub Categories", href: "/admin/sub-sub-categories" },
         ],
       },
       {
-        title: "People",
-        items: [
-          {
-            label: "Vendor Manage",
-            icon: ShopFrontIcon,
-            children: [
-              { label: "Vendor Approval", href: "/admin/vendor-approval" },
-              { label: "Add New Vendor", href: "/admin/vendors/new" },
-              { label: "Vendor List", href: "/admin/vendors" },
-            ],
-          },
+        label: "Vendor Manage",
+        icon: ShopFrontIcon,
+        children: [
+          { label: "Vendor Approval", href: "/admin/vendor-approval" },
+          { label: "Add New Vendor", href: "/admin/vendors/new" },
+          { label: "Vendor List", href: "/admin/vendors" },
         ],
       },
     ],
@@ -188,23 +166,18 @@ function isActive(href: string | undefined, pathname: string): boolean {
 }
 
 /**
- * Narrow the navigation to a menu search. A group whose own label matches
+ * Narrow the navigation to a menu search. A dropdown whose own label matches
  * keeps all its children; otherwise it keeps only the matching ones.
  */
-function filterGroups(groups: NavGroup[], query: string): NavGroup[] {
-  if (!query) return groups;
+function filterItems(items: NavItem[], query: string): NavItem[] {
+  if (!query) return items;
   const matches = (label: string) => label.toLowerCase().includes(query);
 
-  return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.flatMap((item): NavItem[] => {
-        if (matches(item.label)) return [item];
-        const children = item.children?.filter((child) => matches(child.label));
-        return children?.length ? [{ ...item, children }] : [];
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  return items.flatMap((item): NavItem[] => {
+    if (matches(item.label)) return [item];
+    const children = item.children?.filter((child) => matches(child.label));
+    return children?.length ? [{ ...item, children }] : [];
+  });
 }
 
 export function DashboardShell({
@@ -250,14 +223,14 @@ export function DashboardShell({
   const pathname = usePathname();
   const query = menuQuery.trim().toLowerCase();
   const sidebar = SIDEBAR[role];
-  const groups = filterGroups(sidebar.groups, query);
+  const items = filterItems(sidebar.items, query);
 
   return (
     <div className="flex min-h-dvh bg-bg-dash">
       {/* Desktop navigation, in flow. */}
       {!sidebarHidden ? (
         <div className="sticky top-0 hidden h-dvh flex-none lg:flex">
-          <Sidebar config={sidebar} groups={groups} pathname={pathname} searching={Boolean(query)} />
+          <Sidebar config={sidebar} items={items} pathname={pathname} searching={Boolean(query)} />
         </div>
       ) : null}
 
@@ -273,7 +246,7 @@ export function DashboardShell({
           <div className="relative flex h-full w-fit max-w-[calc(100vw-48px)] shadow-xl">
             <Sidebar
               config={sidebar}
-              groups={groups}
+              items={items}
               pathname={pathname}
               searching={Boolean(query)}
               onClose={() => setDrawerOpen(false)}
@@ -359,13 +332,13 @@ export function DashboardShell({
 
 function Sidebar({
   config,
-  groups,
+  items,
   pathname,
   searching,
   onClose,
 }: {
   config: SidebarConfig;
-  groups: NavGroup[];
+  items: NavItem[];
   pathname: string;
   /** A menu search is active: expandable groups show their matches open. */
   searching: boolean;
@@ -395,32 +368,16 @@ function Sidebar({
       </div>
 
       <nav aria-label="Dashboard">
-        {groups.map((group, index) => (
-          <div key={group.title} className="mb-[6px]">
-            <p
-              className={`mb-[10px] px-2 text-[11px] font-semibold uppercase leading-none tracking-[0.08em] text-iris-100 ${
-                index > 0 ? "mt-[18px]" : ""
-              }`}
-            >
-              {group.title}
-            </p>
-            <div className="flex flex-col gap-[3px]">
-              {group.items.map((item) =>
-                item.children ? (
-                  <SidebarGroupItem
-                    key={item.label}
-                    item={item}
-                    pathname={pathname}
-                    forceOpen={searching}
-                  />
-                ) : (
-                  <SidebarLink key={item.label} item={item} active={isActive(item.href, pathname)} />
-                ),
-              )}
-            </div>
-          </div>
-        ))}
-        {!groups.length ? (
+        <div className="flex flex-col gap-[3px]">
+          {items.map((item) =>
+            item.children ? (
+              <SidebarGroupItem key={item.label} item={item} pathname={pathname} forceOpen={searching} />
+            ) : (
+              <SidebarLink key={item.label} item={item} active={isActive(item.href, pathname)} />
+            ),
+          )}
+        </div>
+        {!items.length ? (
           <p className="px-3 py-2 text-[12.5px] text-iris-100">No matching menu items.</p>
         ) : null}
       </nav>
@@ -470,7 +427,9 @@ function SidebarGroupItem({
   const [open, setOpen] = useState(containsActive);
   const expanded = open || forceOpen;
   const Icon = item.icon;
-  const panelId = `nav-${item.label.toLowerCase().replace(/\W+/g, "-")}`;
+  // Unique per instance: the desktop sidebar and the mobile drawer both render
+  // this menu, so a label-based id would appear twice in the document.
+  const panelId = useId();
 
   return (
     <div>
@@ -485,27 +444,42 @@ function SidebarGroupItem({
         <span className="flex-1 text-left">{item.label}</span>
         <ChevronDownIcon
           size={15}
-          className={`text-iris-100 transition-[transform,color] duration-200 group-hover:text-iris-700 ${expanded ? "rotate-180" : ""}`}
+          className={`text-iris-100 transition-[transform,color] duration-300 ease-[ease] group-hover:text-iris-700 motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`}
         />
       </button>
-      {expanded ? (
-        <div id={panelId} className="mt-[3px] flex flex-col gap-[2px]">
-          {children.map((child) => {
-            const active = child.href === activeHref;
-            return (
-              <NavTarget
-                key={child.label}
-                href={child.href}
-                className={`flex w-full items-center rounded-[10px] py-[9px] pl-[40px] pr-3 text-[13px] leading-none transition-colors duration-150 ${
-                  active ? ROW_ACTIVE : ROW_IDLE
-                }`}
-              >
-                {child.label}
-              </NavTarget>
-            );
-          })}
+      {/*
+        Expands/collapses to the content's natural height by animating the
+        grid row between 0fr and 1fr — no measured or fixed heights, so it
+        stays right whatever the children are. Kept mounted so closing can
+        animate; `inert` takes the collapsed links out of tab order and the
+        accessibility tree. Same 0.3s ease as the chevron.
+      */}
+      <div
+        id={panelId}
+        inert={!expanded}
+        className={`grid transition-[grid-template-rows] duration-300 ease-[ease] motion-reduce:transition-none ${
+          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="flex flex-col gap-[2px] pt-[3px]">
+            {children.map((child) => {
+              const active = child.href === activeHref;
+              return (
+                <NavTarget
+                  key={child.label}
+                  href={child.href}
+                  className={`flex w-full items-center rounded-[10px] py-[9px] pl-[40px] pr-3 text-[13px] leading-none transition-colors duration-150 ${
+                    active ? ROW_ACTIVE : ROW_IDLE
+                  }`}
+                >
+                  {child.label}
+                </NavTarget>
+              );
+            })}
+          </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

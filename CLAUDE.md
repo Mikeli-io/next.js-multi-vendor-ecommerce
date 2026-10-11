@@ -9,6 +9,12 @@
 - Extract repeated UI patterns into shared components.
 - Avoid unnecessary abstraction for simple UI that is only used once.
 
+## Dashboard Navigation
+
+- Do not use non-clickable section heading labels in dashboard sidebars unless explicitly requested.
+- Sidebars are one continuous list: top-level items name the main sections, and related child pages go in collapsible dropdowns where appropriate.
+- In the vendor sidebar, POS stays the last top-level item.
+
 ## Local Resource Usage
 
 - You may start, stop, or restart the development server when required for implementation or testing. Reuse an existing development server when practical. Do not leave servers running unnecessarily.
