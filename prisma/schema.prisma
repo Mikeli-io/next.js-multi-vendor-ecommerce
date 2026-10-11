@@ -227,6 +227,12 @@ model Product {
   /// The vendor's own on/off switch. Independent of `approvalStatus`.
   isActive       Boolean               @default(true)
 
+  /// Admin-only merchandising flags, independent of each other. Only an
+  /// APPROVED product may carry them; leaving APPROVED clears both.
+  /// Vendors can never set them.
+  isFeatured Boolean @default(false)
+  isPopular  Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -129,6 +129,17 @@ const SIDEBAR: Record<Role, SidebarConfig> = {
         ],
       },
       {
+        label: "Product Manage",
+        icon: BoxIcon,
+        children: [
+          { label: "Pending Products", href: "/admin/products/pending" },
+          { label: "Approved Products", href: "/admin/products/approved" },
+          { label: "Rejected Products", href: "/admin/products/rejected" },
+          { label: "Featured Products", href: "/admin/products/featured" },
+          { label: "Popular Products", href: "/admin/products/popular" },
+        ],
+      },
+      {
         label: "Vendor Manage",
         icon: ShopFrontIcon,
         children: [
