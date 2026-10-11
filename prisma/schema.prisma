@@ -1,5 +1,5 @@
-// Covet — accounts & auth, vendors, catalog taxonomy and brands, and vendor
-// products. Orders, cart and payments are not modelled yet.
+// Covet — accounts & auth, vendors, catalog taxonomy and brands, vendor
+// products and vendor coupons. Orders, cart and payments are not modelled yet.
 
 generator client {
   provider = "prisma-client-js"
@@ -77,6 +77,8 @@ model Vendor {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   products Product[]
+
+  coupons Coupon[]
 
   @@map("vendors")
 }
@@ -234,6 +236,7 @@ model Product {
   subCategory    SubCategory?       @relation(fields: [subCategoryId], references: [id], onDelete: Restrict)
   subSubCategory SubSubCategory?    @relation(fields: [subSubCategoryId], references: [id], onDelete: Restrict)
   variations     ProductVariation[]
+  couponLinks    CouponProduct[]
 
   @@index([vendorId])
   @@index([categoryId])
@@ -262,4 +265,87 @@ model ProductVariation {
 
   @@index([productId])
   @@map("product_variations")
+}
+
+// ---- Vendor coupons -------------------------------------------------------------
+
+/// What a coupon does (VendorCoupon design). Applied at checkout, which is not built yet.
+enum CouponType {
+  DISCOUNT_ON_PURCHASE
+  FREE_DELIVERY
+  FIRST_ORDER
+}
+
+/// The vendor's on/off switch for a coupon.
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// Which of the vendor's products a coupon covers. ALL_PRODUCTS is store-wide
+/// and has no CouponProduct rows; SPECIFIC_PRODUCTS covers exactly the
+/// products linked through CouponProduct.
+enum CouponAppliesTo {
+  ALL_PRODUCTS
+  SPECIFIC_PRODUCTS
+}
+
+/// A vendor's own coupon. Applies to all customers (the design offers no
+/// other choice) and its cost is always borne by the vendor.
+model Coupon {
+  id       String @id @default(cuid())
+  /// Always the signed-in vendor's store, set on the server — never form input.
+  vendorId String
+
+  type  CouponType
+  title String     @db.VarChar(100)
+  /// Normalized to upper case on the server; unique across the marketplace so
+  /// a code entered at checkout resolves to exactly one coupon.
+  code  String     @unique @db.VarChar(30)
+
+  /// AMOUNT or PERCENTAGE; null for FREE_DELIVERY, which has no discount value.
+  discountType ProductDiscountType?
+  discount     Decimal?             @db.Decimal(10, 2)
+  /// Optional cap on a PERCENTAGE discount.
+  maxDiscount  Decimal?             @db.Decimal(10, 2)
+  /// 0 means no minimum.
+  minPurchase  Decimal              @default(0) @db.Decimal(10, 2)
+  /// How many times one customer may use the coupon.
+  limitPerUser Int
+
+  /// Date only — the time part is always midnight UTC.
+  startDate  DateTime @db.Date
+  /// Date only; the coupon is valid through this day.
+  expireDate DateTime @db.Date
+
+  status CouponStatus @default(ACTIVE)
+
+  appliesTo CouponAppliesTo @default(ALL_PRODUCTS)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor   Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  /// Only for SPECIFIC_PRODUCTS; always products of the coupon's own vendor.
+  products CouponProduct[]
+
+  @@index([vendorId])
+  @@index([status])
+  @@map("coupons")
+}
+
+/// Links a SPECIFIC_PRODUCTS coupon to one of its vendor's products. Deleting
+/// either side removes the link (never the other side).
+model CouponProduct {
+  couponId  String
+  productId String
+  createdAt DateTime @default(now())
+
+  coupon  Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// A product is linked to a coupon at most once.
+  @@id([couponId, productId])
+  @@index([productId])
+  @@map("coupon_products")
 }

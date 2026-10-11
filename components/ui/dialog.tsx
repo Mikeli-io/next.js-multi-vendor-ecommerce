@@ -16,6 +16,10 @@ import { CloseIcon } from "./icons";
  * Controlled: the parent owns `open`; Escape, the close button and a backdrop
  * click all call `onClose`. Pass `dismissible={false}` while a submission is
  * in flight so it cannot be closed half-way.
+ *
+ * `bare` drops the standard header for a fully custom layout (e.g. the coupon
+ * card): the content fills the dialog edge to edge, a floating close button
+ * stays, and `title` becomes the dialog's accessible name.
  */
 export function Dialog({
   open,
@@ -25,14 +29,16 @@ export function Dialog({
   children,
   size = "md",
   dismissible = true,
+  bare = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   description?: string;
   children: ReactNode;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   dismissible?: boolean;
+  bare?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -54,8 +60,9 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      aria-labelledby={titleId}
-      aria-describedby={description ? descriptionId : undefined}
+      aria-labelledby={bare ? undefined : titleId}
+      aria-label={bare ? title : undefined}
+      aria-describedby={description && !bare ? descriptionId : undefined}
       onCancel={(event) => {
         // Escape: keep React in control of whether it actually closes.
         event.preventDefault();
@@ -66,10 +73,23 @@ export function Dialog({
         if (event.target === event.currentTarget && dismissible) onClose();
       }}
       className={`dialog-enter m-auto w-[calc(100%-32px)] rounded-2xl bg-surface p-0 text-ink-soft shadow-xl backdrop:bg-[rgba(20,18,31,.55)] backdrop:backdrop-blur-[3px] ${
-        size === "sm" ? "max-w-[440px]" : "max-w-[560px]"
+        size === "sm" ? "max-w-[440px]" : size === "lg" ? "max-w-[660px]" : "max-w-[560px]"
       }`}
     >
-      {open ? (
+      {open && bare ? (
+        <div className="relative">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={!dismissible}
+            aria-label="Close"
+            className="absolute right-4 top-4 z-10 grid size-[34px] cursor-pointer place-items-center rounded-full bg-surface/90 text-muted transition-colors duration-150 hover:bg-iris-100 hover:text-iris-700"
+          >
+            <CloseIcon size={16} />
+          </button>
+          {children}
+        </div>
+      ) : open ? (
         <div className="p-6 sm:p-7">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div className="min-w-0">

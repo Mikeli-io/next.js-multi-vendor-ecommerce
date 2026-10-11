@@ -33,6 +33,7 @@ import {
   ShopFrontIcon,
   SlidersIcon,
   TagIcon,
+  TicketIcon,
   UserIcon,
 } from "@/components/ui/icons";
 import { NavTarget } from "@/components/ui/nav-target";
@@ -102,6 +103,19 @@ const SIDEBAR: Record<Role, SidebarConfig> = {
             children: [
               { label: "Product List", href: "/vendor/products" },
               { label: "Add New Product", href: "/vendor/products/new" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Promotion Management",
+        items: [
+          {
+            label: "Coupon Manage",
+            icon: TicketIcon,
+            children: [
+              { label: "Create Coupon", href: "/vendor/coupons/new" },
+              { label: "Coupon List", href: "/vendor/coupons" },
             ],
           },
         ],

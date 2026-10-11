@@ -215,6 +215,10 @@ export function PasswordField({
   );
 }
 
+/** The checkbox box itself, for custom rows that need the design's checkbox (e.g. list pickers). */
+export const CHECKBOX_INPUT =
+  "size-[19px] flex-none cursor-pointer appearance-none rounded-[6px] border-[1.5px] border-[#D6D4DD] bg-surface bg-[length:12px_12px] bg-center bg-no-repeat transition-colors duration-200 checked:border-iris-500 checked:bg-iris-500 checked:bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%2220 6 9 17 4 12%22/></svg>')] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-muted";
+
 /** The design's square checkbox, driven by a real input rather than a span. */
 export function Checkbox({
   label,
@@ -235,7 +239,7 @@ export function Checkbox({
           id={id}
           type="checkbox"
           aria-describedby={errors?.length ? errorId : undefined}
-          className="mt-[1px] size-[19px] flex-none cursor-pointer appearance-none rounded-[6px] border-[1.5px] border-[#D6D4DD] bg-surface bg-[length:12px_12px] bg-center bg-no-repeat transition-colors duration-200 checked:border-iris-500 checked:bg-iris-500 checked:bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22white%22 stroke-width=%223%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><polyline points=%2220 6 9 17 4 12%22/></svg>')] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-muted"
+          className={`mt-[1px] ${CHECKBOX_INPUT}`}
         />
         <label
           htmlFor={id}

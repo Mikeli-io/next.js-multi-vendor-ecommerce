@@ -35,7 +35,7 @@ export function normalizeMoney(value: string): string {
   return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
 }
 
-const money = (label: string) =>
+export const money = (label: string) =>
   z
     .string({ error: `Enter the ${label}.` })
     .trim()
@@ -43,7 +43,7 @@ const money = (label: string) =>
     .regex(MONEY, { error: `Enter the ${label} as a number with up to 2 decimals, e.g. 19.99.` })
     .transform(normalizeMoney);
 
-const optionalMoney = (label: string) => z.preprocess(blankToNull, money(label).nullable());
+export const optionalMoney = (label: string) => z.preprocess(blankToNull, money(label).nullable());
 
 const percent = (label: string) =>
   z.preprocess(
